@@ -18,8 +18,11 @@ import { settingsRouter } from './settings';
 import { splitBillRouter } from './split-bill';
 import { notificationRouter } from './notification';
 import { pushSubscriptionRouter } from './push-subscription';
+import { taxRouter } from './tax';
+import { householdRouter } from './household';
 
 export const appRouter = router({
+    tax: taxRouter,
     user: userRouter,
     bank: bankRouter,
     account: accountRouter,
@@ -39,6 +42,7 @@ export const appRouter = router({
     splitBill: splitBillRouter,
     notification: notificationRouter,
     pushSubscription: pushSubscriptionRouter,
+    household: householdRouter,
 });
 
 export type AppRouter = typeof appRouter;

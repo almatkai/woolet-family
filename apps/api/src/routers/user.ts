@@ -4,6 +4,7 @@ import { router, protectedProcedure } from '../lib/trpc';
 import { investingCache } from '../lib/investing-cache';
 import { redis } from '../lib/redis';
 import { invalidateUserFinancialCaches } from '../lib/cache-invalidation';
+import { prepareFamilyForUserDeletion } from '../lib/household/membership-cleanup';
 import {
     users,
     banks,
@@ -51,20 +52,24 @@ const USERNAME_SCHEMA = z.string()
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Family tables belong to multiple members, so personal export/import never transfers them.
+const FAMILY_TABLES = new Set(['households', 'householdMembers', 'householdInvitations', 'familyWallets', 'familyWalletTransactions', 'familyBudgetLimits', 'household_members', 'household_invitations', 'family_wallets', 'family_wallet_transactions', 'family_budget_limits']);
 // Valid table names for import
 const VALID_TABLES = [
     'banks', 'accounts', 'currencyBalances', 'categories', 'transactions',
     'debts', 'debtPayments', 'credits', 'creditPayments', 'mortgages', 'mortgagePayments', 'deposits',
     'stocks', 'stockPrices', 'portfolioHoldings', 'investmentTransactions',
     'subscriptions', 'subscriptionPayments', 'splitParticipants', 'transactionSplits', 'splitPayments',
-    'userSettings', 'dashboardLayouts'
+    'userSettings', 'dashboardLayouts', 'taxProfiles', 'taxEstimatedPayments'
 ] as const;
 
 // Schema for validating imported data structure
 const importDataSchema = z.object({
     timestamp: z.string().datetime().optional(),
     version: z.number().optional(),
-    data: z.record(z.array(z.record(z.any())))
+    data: z.record(z.unknown())
+        .transform(data => Object.fromEntries(Object.entries(data).filter(([key]) => !FAMILY_TABLES.has(key))))
+        .pipe(z.record(z.array(z.record(z.any()))))
         .refine(
             (data) => Object.keys(data).every(key => VALID_TABLES.includes(key as any)),
             { message: 'Invalid table name in import data' }
@@ -399,7 +404,12 @@ export const userRouter = router({
         }),
 
     deleteAllData: protectedProcedure
-        .mutation(async ({ ctx }) => {
+        .mutation(async ({ ctx: originalCtx }) => {
+            const result = await originalCtx.db.transaction(async tx => {
+            const ctx = { ...originalCtx, db: tx };
+            // Even when the account remains, shared family data is not personal data:
+            // leave the family (or delete an owner-only household) before resetting.
+            await prepareFamilyForUserDeletion(tx, ctx.userId);
             const userBankIds = ctx.db
                 .select({ id: banks.id })
                 .from(banks)
@@ -427,6 +437,9 @@ export const userRouter = router({
 
             // Delete all user-related data in correct order (respecting foreign key constraints)
             // Start with child tables first, then parent tables
+
+            await ctx.db.delete(schema.taxEstimatedPayments).where(eq(schema.taxEstimatedPayments.userId, ctx.userId));
+            await ctx.db.delete(schema.taxProfiles).where(eq(schema.taxProfiles.userId, ctx.userId));
 
             // Delete transactions (references currency balances)
             await ctx.db.delete(transactions)
@@ -488,10 +501,6 @@ export const userRouter = router({
             await ctx.db.delete(stocks)
                 .where(eq(stocks.userId, ctx.userId));
 
-            // Clear investing cache for this user
-            await invalidateUserFinancialCaches(ctx.userId);
-            await investingCache.invalidatePattern(`portfolio:${ctx.userId}`);
-
             // Reset user to default state (keep the user record but reset test mode)
             const [resetUser] = await ctx.db.update(users)
                 .set({
@@ -506,23 +515,20 @@ export const userRouter = router({
                 message: 'All user data has been deleted successfully',
                 user: resetUser
             };
+            });
+            await invalidateUserFinancialCaches(originalCtx.userId);
+            await investingCache.invalidatePattern(`portfolio:${originalCtx.userId}`);
+            return result;
         }),
 
     deleteAccount: protectedProcedure
         .mutation(async ({ ctx }) => {
-            // 1. Manually delete entities that might not have cascade delete
-            // (Though we should ideally update the schema, we'll be safe here)
-
-            // Delete user settings
-            await ctx.db.delete(userSettings).where(eq(userSettings.userId, ctx.userId));
-
-            // Delete subscriptions (assuming they don't cascade)
-            await ctx.db.delete(subscriptions).where(eq(subscriptions.userId, ctx.userId));
-
-            // 2. Delete the main user record. 
-            // Most other tables (banks, stocks, ai_usage, categories, dashboard_layouts)
-            // have onDelete: 'cascade' on their userId foreign key.
-            await ctx.db.delete(users).where(eq(users.id, ctx.userId));
+            await ctx.db.transaction(async tx => {
+                await prepareFamilyForUserDeletion(tx, ctx.userId, { deleteAccount: true });
+                await tx.delete(userSettings).where(eq(userSettings.userId, ctx.userId));
+                await tx.delete(subscriptions).where(eq(subscriptions.userId, ctx.userId));
+                await tx.delete(users).where(eq(users.id, ctx.userId));
+            });
 
             // Clear any user-specific cache
             await investingCache.invalidatePattern(`*:${ctx.userId}`);
@@ -651,6 +657,10 @@ export const userRouter = router({
             where: inArray(schema.splitPayments.splitId, splitIds)
         }) : [];
 
+        const userTaxProfiles = await ctx.db.query.taxProfiles.findMany({ where: eq(schema.taxProfiles.userId, ctx.userId) });
+        const userTaxPayments = await ctx.db.query.taxEstimatedPayments.findMany({ where: eq(schema.taxEstimatedPayments.userId, ctx.userId) });
+        const exportedTransactionIds = new Set(userTransactions.map(t => t.id));
+
         // 4. Record export attempt
         await ctx.db.insert(exportHistories).values({
             userId: ctx.userId,
@@ -665,10 +675,13 @@ export const userRouter = router({
             where: inArray(schema.subscriptionPayments.subscriptionId, subscriptionIds)
         }) : [];
 
+        // Family tables are deliberately excluded: they contain other members' data.
         return {
             timestamp: new Date().toISOString(),
             version: 1,
             data: {
+                taxProfiles: stripUserId(userTaxProfiles),
+                taxEstimatedPayments: stripUserId(userTaxPayments.map(p => ({ ...p, transactionId: p.transactionId && exportedTransactionIds.has(p.transactionId) ? p.transactionId : null }))),
                 banks: stripUserId(userBanks),
                 accounts: userAccounts,
                 currencyBalances: balances,
@@ -1069,6 +1082,21 @@ export const userRouter = router({
                     if (validSplitPayments.length > 0) {
                         await tx.insert(schema.splitPayments).values(validSplitPayments);
                     }
+                }
+
+                // Replace tax years supplied by this backup; preserve other years and
+                // the existing merge-import behavior for all other entities.
+                const taxYears = [...new Set<number>((data.taxProfiles ?? []).map((p: { taxYear: number }) => p.taxYear))];
+                if (taxYears.length) {
+                    await tx.delete(schema.taxProfiles).where(and(eq(schema.taxProfiles.userId, ctx.userId), inArray(schema.taxProfiles.taxYear, taxYears)));
+                    await tx.insert(schema.taxProfiles).values(withUser(data.taxProfiles));
+                }
+                const paymentYears = [...new Set<number>((data.taxEstimatedPayments ?? []).map((p: { taxYear: number }) => p.taxYear))];
+                if (paymentYears.length) {
+                    await tx.delete(schema.taxEstimatedPayments).where(and(eq(schema.taxEstimatedPayments.userId, ctx.userId), inArray(schema.taxEstimatedPayments.taxYear, paymentYears)));
+                    await tx.insert(schema.taxEstimatedPayments).values(withUser(data.taxEstimatedPayments.map((p: { transactionId: string | null }) => ({
+                        ...p, transactionId: p.transactionId && validTransactionIds.has(p.transactionId) ? p.transactionId : null,
+                    }))));
                 }
 
                 // Insert user settings

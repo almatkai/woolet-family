@@ -1,4 +1,5 @@
 // Export all schema tables
+export * from './households';
 export * from './users';
 export * from './banks';
 export * from './accounts';
@@ -36,3 +37,4 @@ export * from './ai-model-credentials';
 export * from './notifications';
 export * from './push-subscriptions';
 export * from './export-histories';
+export * from './tax';
