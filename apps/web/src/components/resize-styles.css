@@ -1,0 +1,119 @@
+/* Hide resize handles when not in edit mode */
+.layout:not(.is-editing) .react-resizable-handle {
+    display: none !important;
+}
+
+/* Disable dragging when not in edit mode */
+.layout:not(.is-editing) .react-grid-item {
+    cursor: default !important;
+    pointer-events: auto;
+}
+
+.layout:not(.is-editing) .react-grid-item>* {
+    pointer-events: auto;
+}
+
+.layout:not(.is-editing) .react-draggable {
+    cursor: default !important;
+}
+
+/* Touch device drag handle support */
+.drag-handle {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.no-drag {
+    touch-action: auto;
+}
+
+/* In edit mode, grid items should allow scrolling by default (touch-action: auto).
+   Only .drag-handle has touch-action: none, so only touches on the handle initiate drags. */
+.layout.is-editing .react-grid-item {
+    touch-action: auto;
+}
+
+/* Ensure mobile drag handle is large enough to grab (44px minimum touch target) */
+@media (max-width: 900px) {
+    .drag-handle {
+        min-height: 44px !important;
+        height: 44px !important;
+    }
+}
+
+/* Resizable handles - only visible in edit mode */
+.layout.is-editing .react-grid-item>.react-resizable-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    bottom: 0;
+    right: 0;
+    background-position: bottom right;
+    padding: 0 3px 3px 0;
+    background-repeat: no-repeat;
+    background-origin: content-box;
+    box-sizing: border-box;
+    cursor: se-resize;
+    z-index: 100 !important;
+    /* Force on top */
+}
+
+.layout.is-editing .react-grid-item>.react-resizable-handle::after {
+    content: "";
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 12px;
+    height: 12px;
+    border-right: 2px solid rgba(255, 255, 255, 0.4);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Drag placeholder styling */
+.layout.is-editing .react-grid-placeholder {
+    background: rgba(59, 130, 246, 0.12) !important;
+    border: 2px dashed rgba(59, 130, 246, 0.45) !important;
+    border-radius: 12px !important;
+    opacity: 1 !important;
+}
+
+/* Prevent flickering and layout fighting */
+.layout .react-grid-item {
+    will-change: transform;
+    transition: width 220ms cubic-bezier(.22,1,.36,1), height 220ms cubic-bezier(.22,1,.36,1), transform 220ms cubic-bezier(.22,1,.36,1) !important;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    overflow: visible !important;
+}
+
+
+.layout {
+    overflow: visible !important;
+}
+/* Editing is an interaction surface, not a text-selection surface. */
+.layout.is-editing, .layout.is-editing *,
+body.dashboard-interacting, body.dashboard-interacting * {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+.layout.is-editing .dashboard-widget { pointer-events: none; }
+.layout.is-editing .react-grid-item.resizing,
+.layout.is-editing .react-grid-item.react-draggable-dragging { z-index: 60 !important; }
+
+/* One measured grid, shared by the drop target, resize bounds and edit guide. */
+.layout.is-editing {
+    background-image: linear-gradient(to right, rgb(139 92 246 / .16) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(139 92 246 / .16) 1px, transparent 1px);
+    background-size: var(--dashboard-column-step) var(--dashboard-row-step);
+    background-position: 12px 12px;
+}
+.layout.is-editing .react-grid-item.react-draggable-dragging {
+    transition: width 220ms cubic-bezier(.22,1,.36,1), height 220ms cubic-bezier(.22,1,.36,1) !important;
+}
+.layout.is-editing:has(.react-grid-item.resizing) .react-grid-item {
+    transition-duration: 180ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    .layout .react-grid-item { transition: none !important; }
+}

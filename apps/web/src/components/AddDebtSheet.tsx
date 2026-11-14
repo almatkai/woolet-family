@@ -1,0 +1,380 @@
+
+import { useState, useMemo, type ReactNode } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Plus, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
+import { formatAccountLabel } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { CurrencySelect } from './CurrencySelect';
+import { Switch } from '@/components/ui/switch';
+import { UntrackedDebtHelp } from '@/components/UntrackedDebtHelp';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+    SheetFooter,
+    SheetClose
+} from '@/components/ui/sheet';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+
+const createDebtSchema = z.object({
+    isExternal: z.boolean(),
+    currencyBalanceId: z.string().uuid().optional().nullable(),
+    currencyCode: z.string().optional().nullable(),
+    personName: z.string().min(1, "Person name is required").max(100),
+    linkedUserId: z.string().optional().nullable(),
+    personContact: z.string().optional(),
+    amount: z.coerce.number().positive("Amount must be positive"),
+    type: z.enum(['i_owe', 'they_owe']),
+    description: z.string().optional(),
+    dueDate: z.string().optional(),
+}).superRefine((data, ctx) => {
+    if (!data.isExternal && !data.currencyBalanceId) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Required",
+            path: ["currencyBalanceId"]
+        });
+    }
+    if (data.isExternal && !data.currencyCode) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Required",
+            path: ["currencyCode"]
+        });
+    }
+});
+
+type CreateDebtForm = z.infer<typeof createDebtSchema>;
+
+interface AddDebtSheetProps {
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    trigger?: ReactNode;
+}
+
+type UsernameSearchResult = {
+    id: string;
+    username: string | null;
+    name: string | null;
+};
+
+export function AddDebtSheet({
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
+    trigger,
+}: AddDebtSheetProps = {}) {
+    const isCompactMobile = useIsMobile(470);
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const setOpen = controlledOnOpenChange || setInternalOpen;
+    const utils = trpc.useUtils();
+
+    // Fetch hierarchy to select account/currency
+    const { data: banks } = trpc.bank.getHierarchy.useQuery();
+
+    // Flatten hierarchy for select options
+    const currencyOptions = useMemo(() => {
+        if (!banks) return [];
+        const options: { id: string, label: string, balance: number, currencyCode: string }[] = [];
+        banks.forEach((bank: any) => {
+            bank.accounts.forEach((acc: any) => {
+                acc.currencyBalances.forEach((cb: any) => {
+                    options.push({
+                        id: cb.id,
+                        label: `${formatAccountLabel(bank.name, acc.name, acc.last4Digits)} - ${cb.currencyCode}`,
+                        balance: Number(cb.balance),
+                        currencyCode: cb.currencyCode
+                    });
+                });
+            });
+        });
+        return options;
+    }, [banks]);
+
+    const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CreateDebtForm>({
+        resolver: zodResolver(createDebtSchema),
+        defaultValues: {
+            isExternal: false,
+            personName: '',
+            linkedUserId: null,
+            amount: 0,
+            type: 'i_owe',
+        }
+    });
+
+    const isExternal = watch('isExternal');
+    const currencyBalanceId = watch('currencyBalanceId');
+    const personNameValue = watch('personName');
+    const linkedUserId = watch('linkedUserId');
+    const selectedAccount = useMemo(() =>
+        currencyOptions.find(o => o.id === currencyBalanceId),
+        [currencyOptions, currencyBalanceId]);
+
+    const normalizedUsernameQuery = (personNameValue || '').trim().replace(/^@/, '').toLowerCase();
+    const { data: usernameMatches, isLoading: isSearchingUsername } = trpc.user.searchByUsername.useQuery(
+        { query: normalizedUsernameQuery, limit: 5 },
+        {
+            enabled: normalizedUsernameQuery.length >= 2 && !linkedUserId,
+        }
+    );
+
+    const createDebt = trpc.debt.create.useMutation({
+        onSuccess: () => {
+            utils.debt.list.invalidate();
+            setOpen(false);
+            reset();
+            toast.success('Debt added successfully');
+        },
+        onError: (error: unknown) => {
+            console.error("Failed to create debt:", error);
+            toast.error('Failed to create debt');
+        }
+    });
+
+    const onSubmit = (data: CreateDebtForm) => {
+        if (data.type === 'they_owe') {
+            const selectedAccount = currencyOptions.find(opt => opt.id === data.currencyBalanceId);
+            if (selectedAccount && data.amount > selectedAccount.balance) {
+                toast.error(`Insufficient funds. You only have ${selectedAccount.balance} ${selectedAccount.currencyCode} in this account.`);
+                return;
+            }
+        }
+        const normalizedData = {
+            ...data,
+            currencyBalanceId: data.isExternal ? null : data.currencyBalanceId,
+            description: data.description?.trim() || undefined,
+            personContact: data.personContact?.trim() || undefined,
+            dueDate: data.dueDate?.trim() || undefined,
+            linkedUserId: data.linkedUserId || undefined,
+        };
+        createDebt.mutate(normalizedData);
+    };
+
+    const isControlled = controlledOpen !== undefined;
+
+    return (
+        <Sheet open={open} onOpenChange={setOpen}>
+            {!isControlled && (
+                <SheetTrigger asChild>
+                    {trigger ?? (
+                        <Button className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            Add Debt
+                        </Button>
+                    )}
+                </SheetTrigger>
+            )}
+            <SheetContent
+                side={isCompactMobile ? 'bottom' : 'right'}
+                className="max-[470px]:h-[92dvh] max-[470px]:rounded-t-2xl max-[470px]:pb-[calc(env(safe-area-inset-bottom)+1.5rem)]"
+            >
+                <SheetHeader>
+                    <SheetTitle>Add Debt</SheetTitle>
+                    <SheetDescription>
+                        Track money you owe or others owe you.
+                    </SheetDescription>
+                </SheetHeader>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-6">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="currencyBalanceId">
+                                    {isExternal ? "Currency *" : "Account (Currency) *"}
+                                </Label>
+                                <div className="flex items-center gap-2 bg-muted/30 px-2 py-1 rounded-md border border-transparent hover:border-muted-foreground/20 transition-all">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground whitespace-nowrap">
+                                            Not Tracked
+                                        </span>
+                                        <UntrackedDebtHelp />
+                                    </div>
+                                    <Switch
+                                        id="isExternal"
+                                        checked={isExternal}
+                                        onCheckedChange={(checked) => {
+                                            setValue('isExternal', checked);
+                                            if (checked) {
+                                                setValue('currencyBalanceId', null);
+                                            } else {
+                                                setValue('currencyCode', null);
+                                            }
+                                        }}
+                                        className="scale-75"
+                                    />
+                                </div>
+                            </div>
+
+                            {!isExternal ? (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label>Account</Label>
+                                        {selectedAccount && (
+                                            <span className="text-xs font-medium text-muted-foreground animate-in fade-in duration-300">
+                                                Balance: {selectedAccount.balance.toLocaleString()} {selectedAccount.currencyCode}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Select
+                                        onValueChange={(val) => {
+                                            setValue('currencyBalanceId', val);
+                                            const opt = currencyOptions.find(o => o.id === val);
+                                            if (opt) setValue('currencyCode', opt.currencyCode);
+                                        }}
+                                        defaultValue={watch('currencyBalanceId') || ''}
+                                    >
+                                        <SelectTrigger className="h-12">
+                                            <SelectValue placeholder="Select Account" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {currencyOptions.map(opt => (
+                                                <SelectItem key={opt.id} value={opt.id}>
+                                                    <div className="flex flex-col items-start py-1">
+                                                        <span className="font-medium text-sm">{opt.label}</span>
+                                                        <span className="text-xs text-muted-foreground">{opt.currencyCode} • {opt.balance.toLocaleString()}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.currencyBalanceId && <p className="text-sm text-red-500 mt-1">{errors.currencyBalanceId.message}</p>}
+                                </div>
+                            ) : (
+                                <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <CurrencySelect
+                                        value={watch('currencyCode') || ''}
+                                        onValueChange={(val) => setValue('currencyCode', val)}
+                                    />
+                                    {errors.currencyCode && <p className="text-sm text-red-500 mt-1">{errors.currencyCode.message}</p>}
+                                    <p className="text-[11px] text-muted-foreground italic mt-1.5 px-1">
+                                        Historical debt. No account will be affected.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="description">Reason / Title (Optional)</Label>
+                        <Input id="description" placeholder="e.g. Lunch, Rent share, Car repair..." {...register('description')} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="personName">Person/Entity Name</Label>
+                        <Input
+                            id="personName"
+                            placeholder="e.g. John Doe, Bank, or @username"
+                            value={personNameValue || ''}
+                            onChange={(e) => {
+                                setValue('personName', e.target.value, { shouldValidate: true });
+                                if (linkedUserId) {
+                                    setValue('linkedUserId', null, { shouldValidate: true });
+                                }
+                            }}
+                        />
+                        {linkedUserId && (
+                            <p className="text-xs text-muted-foreground flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                                <span className="flex items-center gap-1">
+                                    <Check className="h-3 w-3 text-green-600" />
+                                    Assigned to Woolet user
+                                </span>
+                                <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 hover:text-foreground"
+                                    onClick={() => setValue('linkedUserId', null, { shouldValidate: true })}
+                                >
+                                    <X className="h-3 w-3" />
+                                    Clear
+                                </button>
+                            </p>
+                        )}
+                        {!linkedUserId && normalizedUsernameQuery.length >= 2 && (
+                            <div className="rounded-md border p-2 space-y-1 max-h-32 overflow-y-auto">
+                                {isSearchingUsername && (
+                                    <p className="text-xs text-muted-foreground">Searching users...</p>
+                                )}
+                                {!isSearchingUsername && usernameMatches?.length === 0 && (
+                                    <p className="text-xs text-muted-foreground">No matching usernames found.</p>
+                                )}
+                                {usernameMatches?.map((u: UsernameSearchResult) => (
+                                    <button
+                                        key={u.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setValue('linkedUserId', u.id, { shouldValidate: true });
+                                            setValue('personName', u.name || `@${u.username}`, { shouldValidate: true });
+                                        }}
+                                        className="w-full text-left text-xs px-2 py-1 rounded hover:bg-muted"
+                                    >
+                                        <span className="font-medium">@{u.username}</span>
+                                        {u.name && <span className="text-muted-foreground"> · {u.name}</span>}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {errors.personName && <p className="text-sm text-red-500">{errors.personName.message}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Type</Label>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <Button
+                                type="button"
+                                variant={watch('type') === 'i_owe' ? 'destructive' : 'outline'}
+                                aria-pressed={watch('type') === 'i_owe'}
+                                onClick={() => setValue('type', 'i_owe')}
+                            >
+                                Borrow
+                            </Button>
+                            <Button
+                                type="button"
+                                variant={watch('type') === 'they_owe' ? 'success' : 'outline'}
+                                aria-pressed={watch('type') === 'they_owe'}
+                                onClick={() => setValue('type', 'they_owe')}
+                            >
+                                Lend (Receivable)
+                            </Button>
+                        </div>
+                        {errors.type && <p className="text-sm text-red-500">{errors.type.message}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="amount">Amount</Label>
+                        <Input id="amount" type="number" step="0.01" {...register('amount')} />
+                        {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="dueDate">Due Date (Optional)</Label>
+                        <Input id="dueDate" type="date" {...register('dueDate')} />
+                        {errors.dueDate && <p className="text-sm text-red-500">{errors.dueDate.message}</p>}
+                    </div>
+
+                    <SheetFooter className="pt-2">
+                        <SheetClose asChild>
+                            <Button variant="outline" type="button">Cancel</Button>
+                        </SheetClose>
+                        <Button type="submit" disabled={createDebt.isLoading}>
+                            {createDebt.isLoading ? 'Adding...' : 'Add Debt'}
+                        </Button>
+                    </SheetFooter>
+                </form>
+            </SheetContent>
+        </Sheet>
+    );
+}

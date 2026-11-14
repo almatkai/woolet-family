@@ -1,0 +1,210 @@
+import { z } from 'zod';
+import { eq, desc, and, count } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../lib/trpc';
+import { banks } from '../db/schema';
+import {
+    TIER_LIMITS,
+    getSubscriptionConfig,
+    formatLimit,
+    SubscriptionTier
+} from '@woolet/shared';
+import { cache, CACHE_KEYS, CACHE_TTL } from '../lib/redis';
+import { invalidateUserFinancialCaches } from '../lib/cache-invalidation';
+
+export { TIER_LIMITS };
+
+export const bankRouter = router({
+    list: protectedProcedure
+        .query(async ({ ctx }) => {
+            const userBanks = await ctx.db.query.banks.findMany({
+                where: and(
+                    eq(banks.userId, ctx.userId!),
+                    eq(banks.isTest, ctx.user.testMode)
+                ),
+                orderBy: [desc(banks.createdAt)],
+                with: {
+                    // We can include accounts if needed, but for now just banks
+                }
+            });
+            return userBanks;
+        }),
+
+    create: protectedProcedure
+        .input(z.object({
+            name: z.string().trim().min(1, 'Bank name is required'),
+            icon: z.string().optional(),
+            color: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const userTier = ctx.user.subscriptionTier || 'free';
+            const limits = TIER_LIMITS[userTier as keyof typeof TIER_LIMITS];
+
+            // Check bank limit
+            const [result] = await ctx.db.select({ count: count() })
+                .from(banks)
+                .where(and(
+                    eq(banks.userId, ctx.userId!),
+                    eq(banks.isTest, ctx.user.testMode)
+                ));
+
+            if (result.count >= limits.banks) {
+                throw new TRPCError({
+                    code: 'FORBIDDEN',
+                    message: `Bank limit reached (${limits.banks}). Upgrade to Pro for unlimited banks.`
+                });
+            }
+
+            try {
+                const [bank] = await ctx.db.insert(banks).values({
+                    userId: ctx.userId!,
+                    name: input.name,
+                    icon: input.icon,
+                    color: input.color,
+                    isTest: ctx.user.testMode,
+                }).returning();
+
+                await invalidateUserFinancialCaches(ctx.userId!);
+
+                return bank;
+            } catch (err: any) {
+                if (err?.code === '23505' || err?.message?.includes('banks_user_is_test_name_unique') || err?.message?.includes('duplicate key')) {
+                    throw new TRPCError({
+                        code: 'CONFLICT',
+                        message: `Bank "${input.name}" already exists`,
+                    });
+                }
+                throw err;
+            }
+        }),
+
+    delete: protectedProcedure
+        .input(z.object({ id: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            // Verify ownership before deletion
+            const bank = await ctx.db.query.banks.findFirst({
+                where: and(
+                    eq(banks.id, input.id),
+                    eq(banks.userId, ctx.userId!)
+                )
+            });
+
+            if (!bank) {
+                throw new TRPCError({ code: 'FORBIDDEN', message: 'Bank not found' });
+            }
+
+            await ctx.db.delete(banks).where(eq(banks.id, input.id));
+            
+            await invalidateUserFinancialCaches(ctx.userId!);
+
+            return { success: true };
+        }),
+
+    update: protectedProcedure
+        .input(z.object({
+            id: z.string().uuid(),
+            name: z.string().trim().min(1).optional(),
+            icon: z.string().optional(),
+            color: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { id, ...updateData } = input;
+            
+            try {
+                const [updated] = await ctx.db.update(banks)
+                    .set(updateData)
+                    .where(and(
+                        eq(banks.id, id),
+                        eq(banks.userId, ctx.userId!)
+                    ))
+                    .returning();
+
+                if (!updated) {
+                    throw new TRPCError({ code: 'FORBIDDEN', message: 'Bank not found' });
+                }
+
+                await invalidateUserFinancialCaches(ctx.userId!);
+
+                return updated;
+            } catch (err: any) {
+                if (err instanceof TRPCError) throw err;
+                if (err?.code === '23505' || err?.message?.includes('banks_user_is_test_name_unique') || err?.message?.includes('duplicate key')) {
+                    throw new TRPCError({
+                        code: 'CONFLICT',
+                        message: `Bank "${input.name}" already exists`,
+                    });
+                }
+                throw err;
+            }
+        }),
+
+    // Get full hierarchy for dashboard/sidebar
+    getHierarchy: protectedProcedure
+        .query(async ({ ctx }) => {
+            const cacheKey = CACHE_KEYS.hierarchy(ctx.userId!, ctx.user.testMode);
+            const cached = await cache.get<any>(cacheKey);
+            if (cached) {
+                console.log('📦 Using cached hierarchy');
+                return cached;
+            }
+
+            const hierarchy = await ctx.db.query.banks.findMany({
+                where: and(
+                    eq(banks.userId, ctx.userId!),
+                    eq(banks.isTest, ctx.user.testMode)
+                ),
+                orderBy: [desc(banks.createdAt)],
+                with: {
+                    accounts: {
+                        with: {
+                            currencyBalances: true
+                        }
+                    }
+                }
+            });
+
+            await cache.set(cacheKey, hierarchy, CACHE_TTL.hierarchy);
+            return hierarchy;
+        }),
+
+    // Get current limits and usage with feature flags
+    getLimitsAndUsage: protectedProcedure
+        .query(async ({ ctx }) => {
+            const userTier = (ctx.user.subscriptionTier || 'free') as SubscriptionTier;
+            const config = getSubscriptionConfig(userTier);
+
+            const [bankCount] = await ctx.db.select({ count: count() })
+                .from(banks)
+                .where(and(
+                    eq(banks.userId, ctx.userId!),
+                    eq(banks.isTest, ctx.user.testMode)
+                ));
+
+            return {
+                tier: userTier,
+                // New structured config
+                display: config.display,
+                features: config.features,
+                credits: config.credits,
+                dataLimits: config.limits,
+                // Legacy format for backward compatibility
+                limits: {
+                    banks: formatLimit(config.limits.maxBanks),
+                    accountsPerBank: formatLimit(config.limits.maxAccountsPerBank),
+                    currenciesPerAccount: formatLimit(config.limits.maxCurrenciesPerAccount),
+                    transactionHistoryDays: formatLimit(config.limits.transactionHistoryDays),
+                    totalStocks: config.limits.maxStocks,
+                    aiQuestionsPerDay: config.credits.aiChat.limit,
+                    aiQuestionsLifetime: config.credits.aiChat.lifetimeLimit
+                        ? config.credits.aiChat.lifetimeLimit
+                        : 'unlimited',
+                    aiDigestRegeneratePerDay: config.credits.aiDigestRegeneration.limit,
+                    aiDigestLength: config.display.aiDigestLength,
+                },
+                usage: {
+                    banks: bankCount.count,
+                },
+                canUpgrade: userTier !== 'premium'
+            };
+        }),
+});

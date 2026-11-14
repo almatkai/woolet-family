@@ -1,0 +1,5 @@
+# Woolet Landing Page Sitemap
+User-agent: *
+Allow: /
+
+Sitemap: https://woolet.com/sitemap.xml

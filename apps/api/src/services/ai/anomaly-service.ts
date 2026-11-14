@@ -1,0 +1,148 @@
+import { db } from '../../db';
+import { accounts, banks, categories, currencyBalances, transactions } from '../../db/schema';
+import { sql } from 'drizzle-orm';
+import { generateTextWithFallback } from '../../lib/ai';
+import { cache, CACHE_KEYS, CACHE_TTL } from '../../lib/redis';
+
+export class AnomalyService {
+    private formatCurrencyAmount(amount: number, currency: string): string {
+        try {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency,
+                maximumFractionDigits: 0,
+            }).format(amount);
+        } catch {
+            return `${currency} ${Math.round(amount).toLocaleString('en-US')}`;
+        }
+    }
+
+    async detectSpendingAnomalies(userId: string, isTestMode: boolean, defaultCurrency = 'USD') {
+        // 1. Get current month stats
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const currentMonthKey = now.toISOString().slice(0, 7);
+        const cacheKey = CACHE_KEYS.spendingAnomalies(userId, isTestMode, currentMonthKey);
+        const cached = await cache.get<{ value: string | null }>(cacheKey);
+        if (cached) return cached.value;
+
+        // 2. Get previous 3 months stats for comparison
+        const startOfComparison = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0];
+
+        // Fetch all expense transactions for these categories in the time range
+        // Note: This might be heavy for many transactions, better to use SQL aggregation.
+        // But Drizzle aggregation with filtered relations can be tricky.
+        // Let's fetch raw data for the last 4 months (current + 3 prev)
+
+        /*
+           We need:
+           Category | Month | Total
+        */
+
+        // Using raw SQL for aggregation might be cleaner here
+        const result = await db.execute(sql`
+            SELECT
+                t.category_id as "categoryId",
+                c.name as "categoryName",
+                TO_CHAR(t.date, 'YYYY-MM') as month,
+                SUM(t.amount) as total
+            FROM ${transactions} t
+            JOIN ${categories} c ON t.category_id = c.id
+            JOIN ${currencyBalances} cb ON t.currency_balance_id = cb.id
+            JOIN ${accounts} a ON cb.account_id = a.id
+            JOIN ${banks} b ON a.bank_id = b.id
+            WHERE b.user_id = ${userId}
+            AND b.is_test = ${isTestMode}
+            AND t.type = 'expense'
+            AND t.date >= ${startOfComparison}
+            AND t.exclude_from_monthly_stats = false
+            AND t.lifecycle_status = 'active'
+            AND t.parent_transaction_id IS NULL
+            AND (c.user_id = ${userId} OR c.user_id IS NULL)
+            GROUP BY t.category_id, c.name, month
+            ORDER BY month DESC
+        `);
+
+        // Process data in JS
+        const categoryStats = new Map<string, { name: string, current: number, history: number[] }>();
+
+        for (const row of result) {
+            const catId = row.categoryId as string;
+            const month = row.month as string;
+            const amount = Number(row.total); // Expenses are usually negative in some systems or positive in others.
+            // In Woolet , expenses are usually stored as positive or negative?
+            // Looking at `repro_price.ts` or similar might hint, but usually 'amount' is magnitude for expense type.
+            // Let's assume positive magnitude for now or use Math.abs
+            const absAmount = Math.abs(amount);
+
+            if (!categoryStats.has(catId)) {
+                categoryStats.set(catId, { name: row.categoryName as string, current: 0, history: [] });
+            }
+            const stats = categoryStats.get(catId)!;
+
+            if (month === currentMonthKey) {
+                stats.current += absAmount;
+            } else {
+                stats.history.push(absAmount);
+            }
+        }
+
+        const anomalies = [];
+
+        for (const [id, stats] of categoryStats.entries()) {
+            if (stats.history.length === 0) continue;
+
+            const avg = stats.history.reduce((a, b) => a + b, 0) / stats.history.length;
+            // Simple threshold: 50% higher than average and absolute increase > 100
+            if (stats.current > avg * 1.5 && stats.current > avg + 100) {
+                anomalies.push({
+                    category: stats.name,
+                    current: stats.current,
+                    average: avg,
+                    percentage: ((stats.current - avg) / avg) * 100
+                });
+            }
+        }
+
+        if (anomalies.length === 0) {
+            await cache.set(cacheKey, { value: null }, CACHE_TTL.spendingAnomalies);
+            return null;
+        }
+
+        const currency = (defaultCurrency || 'USD').toUpperCase();
+        const anomaliesForPrompt = anomalies.map((item) => ({
+            category: item.category,
+            current: this.formatCurrencyAmount(item.current, currency),
+            average: this.formatCurrencyAmount(item.average, currency),
+            percentage: Number(item.percentage.toFixed(1)),
+        }));
+
+        // Use AI to generate insights
+        const prompt = `
+You are a financial analyst for Woolet .
+The user has some spending anomalies this month compared to their 3-month average.
+The user's preferred currency is ${currency}.
+
+Anomalies:
+${JSON.stringify(anomaliesForPrompt, null, 2)}
+
+Task:
+1. Generate a friendly, non-judgmental alert in plain language.
+2. Point out the biggest increases.
+3. Offer a practical tip for reducing spend in these specific categories.
+4. Keep it short (2-4 sentences total).
+5. Format as Markdown.
+6. Never use "$" unless the preferred currency is USD. Reuse the provided formatted amounts exactly.
+`;
+
+        const { text } = await generateTextWithFallback({
+            purpose: 'spending-anomalies',
+            prompt,
+        });
+        const response = text || "No anomaly insights generated.";
+        await cache.set(cacheKey, { value: response }, CACHE_TTL.spendingAnomalies);
+        return response;
+    }
+}
+
+export const anomalyService = new AnomalyService();

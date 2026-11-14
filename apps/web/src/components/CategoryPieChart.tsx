@@ -1,0 +1,502 @@
+import { useWidgetLayout } from '@/components/dashboard/WidgetViewport';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { Link } from '@tanstack/react-router';
+import { PieChart, Pie, Cell } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trpc } from '@/lib/trpc';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatAmountAbbreviated, CurrencyDisplay } from '@/components/CurrencyDisplay';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
+import { PieChart as PieChartIcon, ArrowRight } from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { useTooltipPro } from '@/components/ui/tooltip-pro';
+import { useTheme } from '@/components/theme-provider';
+import { WidgetFooter } from '@/components/dashboard/WidgetFooter';
+
+const COLORS = ['#a78bfa', '#f87171', '#facc15', '#4ade80', '#60a5fa', '#f472b6', '#22d3ee', '#fb923c'];
+
+/** Compute relative luminance from a hex color (0 = black, 1 = white) */
+function getLuminance(hex: string): number {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16) / 255;
+    const g = parseInt(h.substring(2, 4), 16) / 255;
+    const b = parseInt(h.substring(4, 6), 16) / 255;
+    const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+/** Return a contrasting stroke color when the fill would blend with the background */
+function getContrastStroke(fillColor: string, isDark: boolean): string {
+    const lum = getLuminance(fillColor);
+    if (isDark && lum < 0.08) {
+        // Near-black color on dark background → light border
+        return 'rgba(255,255,255,0.35)';
+    }
+    if (!isDark && lum > 0.9) {
+        // Near-white color on light background → dark border
+        return 'rgba(0,0,0,0.25)';
+    }
+    return fillColor;
+}
+
+function useElementSize<T extends HTMLElement>() {
+    const [element, setElement] = useState<T | null>(null);
+    const [size, setSize] = useState({ width: 0, height: 0 });
+
+    const refCallback = useCallback((node: T | null) => {
+        setElement(node);
+    }, []);
+
+    useEffect(() => {
+        if (!element) return;
+
+        const update = () => {
+            const rect = element.getBoundingClientRect();
+            setSize({ width: rect.width, height: rect.height });
+        };
+
+        const handle = setTimeout(update, 0);
+        const observer = new ResizeObserver(update);
+        observer.observe(element);
+        return () => {
+            clearTimeout(handle);
+            observer.disconnect();
+        };
+    }, [element]);
+
+    return { ref: refCallback, size };
+}
+
+export function CategoryPieChart({ gridParams }: { gridParams?: { w: number; h: number } }) {
+    const [period, setPeriod] = useState<'weekly' | 'monthly'>('monthly');
+    const [enabledCategories, setEnabledCategories] = useState<Set<string>>(new Set());
+    const [initialized, setInitialized] = useState(false);
+    const { ref: chartAreaRef, size: chartAreaSize } = useElementSize<HTMLDivElement>();
+
+    const layout = useWidgetLayout(gridParams);
+    const { isNarrow, isShort, isCompact, isTall, isSmallBp, rowLimit } = layout;
+    const isUltraCompact = layout.view === 'summary';
+    const showSelector = isNarrow && layout.showChart;
+
+    const { theme } = useTheme();
+    const isDark = theme === 'dark' || theme === 'super-dark';
+
+    const { data: balanceData } = trpc.account.getTotalBalance.useQuery();
+
+    // Calculate dates
+    const dateRange = useMemo(() => {
+        const now = new Date();
+        if (period === 'weekly') {
+            return {
+                start: startOfWeek(now, { weekStartsOn: 1 }).toISOString(),
+                end: endOfWeek(now, { weekStartsOn: 1 }).toISOString()
+            };
+        } else {
+            return {
+                start: startOfMonth(now).toISOString(),
+                end: endOfMonth(now).toISOString()
+            };
+        }
+    }, [period]);
+
+    const { data: stats, isLoading } = trpc.transaction.getSpendingStats.useQuery({
+        startDate: dateRange.start,
+        endDate: dateRange.end,
+    });
+
+    // Initialize enabled categories when data loads
+    useEffect(() => {
+        const handle = setTimeout(() => {
+            if (stats?.categoryData && !initialized) {
+                setEnabledCategories(new Set(stats.categoryData.map((c: any) => c.id)));
+                setInitialized(true);
+            }
+        }, 0);
+        return () => clearTimeout(handle);
+    }, [stats, initialized]);
+
+    const chartSize = useMemo(() => {
+        const minDim = Math.min(chartAreaSize.width, chartAreaSize.height);
+        if (!Number.isFinite(minDim) || minDim <= 0) return 0;
+        const sideFromDiagonal = minDim / Math.SQRT2;
+        const padding = 8;
+        return Math.max(60, Math.floor(sideFromDiagonal - padding));
+    }, [chartAreaSize]);
+
+    const strokeWidth = 3;
+    const { outerRadius, innerRadius } = useMemo(() => {
+        if (chartSize <= 0) return { outerRadius: 0, innerRadius: 0 };
+        const outer = Math.max(12, Math.floor(chartSize / 2 - strokeWidth - 2));
+        const inner = Math.max(10, Math.floor(outer * 0.68));
+        return { outerRadius: outer, innerRadius: inner };
+    }, [chartSize, strokeWidth]);
+
+    const currencyCode = useMemo(() => {
+        if (!balanceData?.balances) return 'KZT';
+        const activeBalances = Object.entries(balanceData.balances)
+            .filter(([_, amount]) => amount !== 0);
+        return activeBalances.length > 0 ? activeBalances[0][0] : 'KZT';
+    }, [balanceData]);
+
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currencyCode,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(value);
+    };
+
+    const handleToggleCategory = (id: string) => {
+        setEnabledCategories(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    };
+
+
+    // Filter data based on enabled categories
+    const filteredData = useMemo(() => {
+        return (stats?.categoryData || []).filter((c: any) => enabledCategories.has(c.id));
+    }, [stats, enabledCategories]);
+
+    const filteredTotal = useMemo(() => {
+        return filteredData.reduce((sum: number, c: any) => sum + c.value, 0);
+    }, [filteredData]);
+
+    // Initialize tooltip hook
+    const tooltip = useTooltipPro(filteredData, (value: number) => formatCurrency(value), true);
+
+    if (isLoading) {
+        return (
+            <Card className="dashboard-widget widget-tint-amber h-full flex flex-col overflow-hidden">
+                <CardHeader className="pb-2 px-4 pt-4" data-widget-header>
+                    <Skeleton className="h-5 w-32" />
+                </CardHeader>
+                <CardContent className="flex-1 p-4 flex items-center justify-center" data-widget-body>
+                    <Skeleton className="h-[200px] w-[200px] rounded-full" />
+                </CardContent>
+            </Card>
+        );
+    }
+
+    const allCategories = stats?.categoryData || [];
+    
+    // Ensure allCategories is always an array
+    const safeAllCategories = Array.isArray(allCategories) ? allCategories : [];
+
+    return (
+        <Card className="dashboard-widget widget-tint-amber h-full flex flex-col group rounded-[32px] overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0">
+                <CardHeader className="p-3 pb-1 flex flex-row items-start justify-between rounded-t-xl" data-widget-header>
+                    <div className="flex flex-col min-w-0 flex-1">
+                        <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5" data-widget-label>Spending by Category</div>
+                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className="text-lg font-bold tracking-tight whitespace-nowrap" data-widget-value>
+                                <CurrencyDisplay amount={filteredTotal} currency={currencyCode} abbreviate={isNarrow} />
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        {!isUltraCompact && (
+                            <Tabs value={period} onValueChange={(v) => setPeriod(v as 'weekly' | 'monthly')} onClick={(e) => e.stopPropagation()}>
+                                <TabsList className="h-7 bg-muted/50 p-0.5">
+                                    <TabsTrigger value="weekly" className="h-full px-2 text-[10px]">W</TabsTrigger>
+                                    <TabsTrigger value="monthly" className="h-full px-2 text-[10px]">M</TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+                        )}
+                        <div className="p-1.5 bg-muted rounded-md group-hover:bg-muted/80 transition-colors">
+                            <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className={isUltraCompact ? 'flex-1 min-h-0 p-1.5 pt-0 overflow-hidden flex flex-col' : 'flex-1 min-h-0 p-2 sm:p-4 pt-0 sm:pt-2 overflow-hidden flex flex-col'} data-widget-body>
+                    {!layout.showChart ? (
+                        <div data-widget-list>
+                            {filteredData.slice(0, rowLimit).map((item: any) => (
+                                <div key={item.id} data-widget-row className="flex items-center gap-2 rounded-xl bg-white/[0.04]">
+                                    <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color || COLORS[0] }} />
+                                    <span className="min-w-0 flex-1 truncate text-xs" title={item.name}>{item.name}</span>
+                                    <CurrencyDisplay amount={item.value} currency={currencyCode} abbreviate className="shrink-0 text-xs" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                    <>
+                    {showSelector ? (
+                        <>
+                            {/* Category Selector */}
+                            <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                                <Select
+                                    value="all"
+                                    onValueChange={(value) => {
+                                        if (value === 'all') {
+                                            setEnabledCategories(new Set(safeAllCategories.map((c: any) => c.id)));
+                                        } else if (value === 'none') {
+                                            setEnabledCategories(new Set());
+                                        } else {
+                                            handleToggleCategory(value);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder={`${enabledCategories.size} categories selected`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox checked={enabledCategories.size === safeAllCategories.length} className="pointer-events-none" />
+                                                <span>Select All</span>
+                                            </div>
+                                        </SelectItem>
+                                        <SelectItem value="none">
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox checked={false} className="pointer-events-none" />
+                                                <span>Deselect All</span>
+                                            </div>
+                                        </SelectItem>
+                                        {safeAllCategories.slice(0, layout.rows).map((entry: any, index: number) => (
+                                            <SelectItem key={entry.id} value={entry.id}>
+                                                <div className="flex items-center gap-2 w-full">
+                                                    <Checkbox
+                                                        checked={enabledCategories.has(entry.id)}
+                                                        className="pointer-events-none"
+                                                    />
+                                                    <div
+                                                        className="h-2 w-2 rounded-full flex-shrink-0"
+                                                        style={{
+                                                            backgroundColor: entry.color || COLORS[index % COLORS.length],
+                                                            border: (() => {
+                                                                const c = entry.color || COLORS[index % COLORS.length];
+                                                                const lum = getLuminance(c);
+                                                                if (isDark && lum < 0.08) return '1px solid rgba(255,255,255,0.4)';
+                                                                if (!isDark && lum > 0.9) return '1px solid rgba(0,0,0,0.3)';
+                                                                return 'none';
+                                                            })()
+                                                        }}
+                                                    />
+                                                    <span className="flex-1">{entry.name}</span>
+                                                    <span className="text-muted-foreground text-xs">{formatAmountAbbreviated(entry.value)}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div
+                                ref={chartAreaRef}
+                                className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden"
+                            >
+                                {chartSize <= 0 ? (
+                                    <Skeleton className="h-24 w-24 rounded-full" />
+                                ) : (
+                                    <div
+                                        className="relative"
+                                        style={{ width: chartSize, height: chartSize }}
+                                        onMouseMove={tooltip.handleMouseMove}
+                                        onMouseLeave={tooltip.handleMouseLeave}
+                                    >
+                                        <PieChart width={chartSize} height={chartSize} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                                            <Pie
+                                                data={filteredData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={innerRadius}
+                                                outerRadius={outerRadius}
+                                                paddingAngle={2}
+                                                dataKey="value"
+                                                isAnimationActive={false}
+                                                strokeWidth={strokeWidth}
+                                                onClick={(_, index) => tooltip.handleItemClick(filteredData[index])}
+                                                onMouseEnter={(_, index) => tooltip.handleItemHover(filteredData[index])}
+                                                onMouseLeave={() => tooltip.handleItemHover(null)}
+                                            >
+                                                {filteredData.map((entry: any, index: number) => {
+                                                    const color = entry.color || COLORS[index % COLORS.length];
+                                                    return (
+                                                        <Cell
+                                                            key={`cell-${index}`}
+                                                            fill={color}
+                                                            stroke={getContrastStroke(color, isDark)}
+                                                            fillOpacity={1}
+                                                        />
+                                                    );
+                                                })}
+                                            </Pie>
+                                        </PieChart>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                                            <span
+                                                className="font-bold tracking-tight text-foreground block"
+                                                style={{ fontSize: Math.max(chartSize * 0.12, 10) }}
+                                            >
+                                                {formatAmountAbbreviated(filteredTotal)}
+                                            </span>
+                                            {!isUltraCompact && (
+                                                <span
+                                                    className="text-muted-foreground font-medium block"
+                                                    style={{ fontSize: Math.max(chartSize * 0.05, 8) }}
+                                                >
+                                                    {formatCurrency(filteredTotal)}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {tooltip.renderTooltip()}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 min-h-0 flex gap-2 sm:gap-6">
+                            {/* Left: Pie Chart centered vertically */}
+                            <div
+                                ref={chartAreaRef}
+                                className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden"
+                            >
+                                {chartSize <= 0 ? (
+                                    <Skeleton className="h-24 w-24 rounded-full" />
+                                ) : (
+                                    <div
+                                        className="relative"
+                                        style={{ width: chartSize, height: chartSize }}
+                                        onMouseMove={tooltip.handleMouseMove}
+                                        onMouseLeave={tooltip.handleMouseLeave}
+                                    >
+                                        <PieChart width={chartSize} height={chartSize} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                                            <Pie
+                                                data={filteredData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={innerRadius}
+                                                outerRadius={outerRadius}
+                                                paddingAngle={2}
+                                                dataKey="value"
+                                                isAnimationActive={false}
+                                                strokeWidth={strokeWidth}
+                                                onClick={(_, index) => tooltip.handleItemClick(filteredData[index])}
+                                                onMouseEnter={(_, index) => tooltip.handleItemHover(filteredData[index])}
+                                                onMouseLeave={() => tooltip.handleItemHover(null)}
+                                            >
+                                                {filteredData.map((entry: any, index: number) => {
+                                                    const color = entry.color || COLORS[index % COLORS.length];
+                                                    return (
+                                                        <Cell
+                                                            key={`cell-${index}`}
+                                                            fill={color}
+                                                            stroke={getContrastStroke(color, isDark)}
+                                                            fillOpacity={1}
+                                                        />
+                                                    );
+                                                })}
+                                            </Pie>
+                                        </PieChart>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                                            <span
+                                                className="font-bold tracking-tight text-foreground block"
+                                                style={{ fontSize: Math.max(chartSize * 0.12, 10) }}
+                                            >
+                                                {formatAmountAbbreviated(filteredTotal)}
+                                            </span>
+                                            {!isUltraCompact && (
+                                                <span
+                                                    className="text-muted-foreground font-medium block"
+                                                    style={{ fontSize: Math.max(chartSize * 0.05, 8) }}
+                                                >
+                                                    {formatCurrency(filteredTotal)}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {tooltip.renderTooltip()}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right: Category list with checkboxes */}
+                            <div className="w-32 lg:w-44 flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex-1 min-h-0 space-y-1">
+                                    {safeAllCategories.slice(0, layout.rows).map((entry: any, index: number) => {
+                                        const isEnabled = enabledCategories.has(entry.id);
+                                        const percentage = stats?.total ? (entry.value / stats.total * 100) : 0;
+                                        return (
+                                            <div
+                                                key={entry.id}
+                                                className="flex items-center gap-1.5 sm:gap-2 cursor-pointer min-w-0"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleToggleCategory(entry.id);
+                                                }}
+                                            >
+                                                <Checkbox
+                                                    checked={isEnabled}
+                                                    onCheckedChange={() => handleToggleCategory(entry.id)}
+                                                    className="pointer-events-none flex-shrink-0"
+                                                />
+                                                <div
+                                                    className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full flex-shrink-0"
+                                                    style={{
+                                                        backgroundColor: entry.color || COLORS[index % COLORS.length],
+                                                        opacity: isEnabled ? 1 : 0.3,
+                                                        border: (() => {
+                                                            const c = entry.color || COLORS[index % COLORS.length];
+                                                            const lum = getLuminance(c);
+                                                            if (isDark && lum < 0.08) return '1px solid rgba(255,255,255,0.4)';
+                                                            if (!isDark && lum > 0.9) return '1px solid rgba(0,0,0,0.3)';
+                                                            return 'none';
+                                                        })()
+                                                    }}
+                                                />
+                                                <span title={entry.name} className={`text-xs sm:text-[11px] font-semibold flex-1 truncate min-w-0 ${isEnabled ? '' : 'text-muted-foreground'}`}>
+                                                    {entry.name}
+                                                </span>
+                                                <div className="text-right flex-shrink-0">
+                                                    <div className={`text-xs sm:text-[11px] font-bold ${isEnabled ? '' : 'text-muted-foreground'}`}>
+                                                        {formatAmountAbbreviated(entry.value)}
+                                                    </div>
+                                                    <div className="text-[9px] text-muted-foreground">
+                                                        {percentage.toFixed(0)}%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {allCategories.length === 0 && (
+                                        <div className="text-sm text-muted-foreground text-center py-4">
+                                            No spending data
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    </>
+                    )}
+                </CardContent>
+            </div>
+            <WidgetFooter visibleItems={layout.showChart ? Math.min(layout.rows, filteredData.length) : Math.min(rowLimit, filteredData.length)} totalItems={filteredData.length}>
+                <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider" data-widget-label>
+                    {period === 'weekly' ? 'This Week' : 'This Month'}
+                </span>
+                <Link to="/spending" className="text-[9px] font-bold text-primary flex items-center gap-0.5 hover:underline uppercase tracking-wider">
+                    View All <ArrowRight className="h-2.5 w-2.5" />
+                </Link>
+            </WidgetFooter>
+        </Card>
+    );
+}

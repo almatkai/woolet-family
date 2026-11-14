@@ -1,0 +1,36 @@
+{
+  "name": "woolet",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "PORT=3009 WEB_PORT=3003 LANDING_PORT=4324 WEB_URL=http://localhost:3003 turbo run dev",
+    "dev:main": "PORT=3007 WEB_PORT=3001 LANDING_PORT=4322 WEB_URL=http://localhost:3001 turbo run dev --filter=@woolet/web --filter=@woolet/landing --filter=@woolet/api",
+    "dev:work3": "PORT=3008 WEB_PORT=3002 LANDING_PORT=4323 WEB_URL=http://localhost:3002 turbo run dev",
+    "dev:main:prod": "PORT=3006 WEB_PORT=3000 LANDING_PORT=4321 WEB_URL=http://localhost:3000 turbo run dev --filter=@woolet/web --filter=@woolet/landing --filter=@woolet/api",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "db:generate": "turbo run db:generate --filter=@woolet/api",
+    "db:migrate": "turbo run db:migrate --filter=@woolet/api",
+    "db:push": "turbo run db:push --filter=@woolet/api"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "resolutions": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "esbuild": "0.27.4"
+  },
+  "packageManager": "bun@1.3.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "remark-gfm": "^4.0.1"
+  }
+}

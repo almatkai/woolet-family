@@ -1,0 +1,29 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import Features from '../components/Features.astro';
+import HowItWorks from '../components/HowItWorks.astro';
+import Pricing from '../components/Pricing.astro';
+import FAQ from '../components/FAQ.astro';
+import CTA from '../components/CTA.astro';
+import Footer from '../components/Footer.astro';
+import Navbar from '../components/Navbar.astro';
+import { HeroBackground } from '../components/react/HeroBackground';
+
+const title = 'Woolet - Personal Finance Management | Track Expenses, Debts & Investments';
+const description = 'Track bank accounts, expenses, debts, subscriptions, and investments in one place with Woolet. Multi-currency support, manual entry, and AI insights.';
+---
+
+<Layout title={title} description={description}>
+  <Navbar />
+  <main class="relative">
+    <HeroBackground client:load />
+    <Hero />
+    <Features />
+    <HowItWorks />
+    <Pricing />
+    <FAQ />
+    <CTA />
+  </main>
+  <Footer />
+</Layout>

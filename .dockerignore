@@ -1,0 +1,13 @@
+node_modules
+.git
+.turbo
+apps/**/dist
+apps/**/.next
+apps/**/node_modules
+packages/**/node_modules
+apps/mobile/**
+!apps/mobile/package.json
+apps/mobile-v2/**
+apps/chrome-extension/**
+!apps/chrome-extension/package.json
+.env
