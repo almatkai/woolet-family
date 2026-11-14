@@ -5,6 +5,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import {
     Home,
     Receipt,
+    Calculator,
     Landmark,
     Menu,
     Plus,
@@ -14,6 +15,7 @@ import {
     CreditCard,
     PiggyBank,
     Building2,
+    HeartHandshake,
     Settings,
     X,
 } from 'lucide-react';
@@ -35,6 +37,8 @@ const moreItems = [
     { title: 'Credits', url: '/financial/credits', icon: CreditCard },
     { title: 'Mortgages', url: '/financial/mortgages', icon: Building2 },
     { title: 'Deposits', url: '/financial/deposits', icon: PiggyBank },
+    { title: 'Taxes', url: '/tax', icon: Calculator },
+    { title: 'Family', url: '/family', icon: HeartHandshake },
     { title: 'Settings', url: '/settings', icon: Settings },
 ];
 

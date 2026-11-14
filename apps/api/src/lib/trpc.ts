@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { users, admins } from '../db/schema';
 import superjson from 'superjson';
+import { FamilyLimitError } from './household/errors';
 import { PostHogErrorTracking } from './error-tracking';
 
 export interface Context {
@@ -43,6 +44,9 @@ const t = initTRPC.context<Context>().create({
         // Report specific errors to PostHog
         if (error.code === 'INTERNAL_SERVER_ERROR') {
             PostHogErrorTracking.captureException(error);
+        }
+        if (error.cause instanceof FamilyLimitError) {
+            return { ...shape, data: { ...shape.data, limitViolation: error.cause.payload } };
         }
         return shape;
     },

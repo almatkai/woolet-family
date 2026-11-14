@@ -264,6 +264,7 @@ export function StatTile({
     hint,
     icon,
     color = '#8B5CF6',
+    showAura = true,
     className,
 }: {
     label: ReactNode;
@@ -271,10 +272,11 @@ export function StatTile({
     hint?: ReactNode;
     icon?: ReactNode;
     color?: string;
+    showAura?: boolean;
     className?: string;
 }) {
     return (
-        <GlassCard auraColor={color} auraPosition={{ cx: 100, cy: 0 }} className={cn('p-4 sm:p-5', className)}>
+        <GlassCard auraColor={showAura ? color : undefined} auraPosition={{ cx: 100, cy: 0 }} className={cn('p-4 sm:p-5', className)}>
             <div className="relative flex items-start justify-between gap-3">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
                 {icon && (

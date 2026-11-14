@@ -38,7 +38,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
     ZAR: 'R$',
 };
 
-const getCurrencySymbol = (code?: string): string => {
+export const getCurrencySymbol = (code?: string): string => {
     if (!code) return '';
     return CURRENCY_SYMBOLS[code] || code;
 };

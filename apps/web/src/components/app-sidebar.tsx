@@ -3,12 +3,14 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 import { SignOutButton, useAuth, useUser } from '@clerk/clerk-react';
 import {
+    Calculator,
     LayoutDashboard,
     Wallet,
     Receipt,
     Users,
     CreditCard,
     TrendingUp,
+    HeartHandshake,
     Settings,
     ChevronUp,
     PiggyBank,
@@ -59,6 +61,7 @@ const navGroups = [
             { title: 'Accounts', url: '/accounts', icon: Wallet },
             { title: 'Spending', url: '/spending', icon: Receipt },
             { title: 'Subscriptions', url: '/subscriptions', icon: CalendarClock },
+            { title: 'Family', url: '/family', icon: HeartHandshake },
         ],
     },
     {
@@ -69,6 +72,7 @@ const navGroups = [
             { title: 'Mortgages', url: '/financial/mortgages', icon: Home },
             { title: 'Deposits', url: '/financial/deposits', icon: PiggyBank },
             { title: 'Investing', url: '/investing', icon: TrendingUp },
+            { title: 'Taxes', url: '/tax', icon: Calculator },
         ],
     },
 ];

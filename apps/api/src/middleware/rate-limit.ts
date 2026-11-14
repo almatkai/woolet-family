@@ -1,11 +1,12 @@
 import type { Context, Next } from 'hono';
+import { getAuth } from '@hono/clerk-auth';
 import { redis } from '../lib/redis';
 
 const WINDOW_SIZE_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS = 100;
 
 export const rateLimitMiddleware = async (c: Context, next: Next) => {
-    const userId = c.get('userId');
+    const userId = getAuth(c)?.userId;
     const ip = c.req.header('x-forwarded-for')?.split(',')[0].trim() || c.req.header('x-real-ip') || 'anonymous';
     const identifier = userId ? `user:${userId}` : `ip:${ip}`;
     const key = `ratelimit:${identifier}`;

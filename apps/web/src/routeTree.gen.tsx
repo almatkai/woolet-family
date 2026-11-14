@@ -1,3 +1,6 @@
+import { FamilyPage } from './routes/family';
+import { FamilyJoinPage } from './routes/family/join';
+import { FamilyWalletPage } from './routes/family/wallet';
 import { createRootRoute, createRoute, Outlet, useLocation, Navigate, redirect } from '@tanstack/react-router';
 import { SignedIn, useAuth } from '@clerk/clerk-react';
 import { useState, useEffect } from 'react';
@@ -45,6 +48,7 @@ import { AccountsPage } from './routes/accounts';
 import { SpendingPage } from './routes/spending';
 import { DebtsPage } from './routes/debts';
 import { InvestingPage } from './routes/investing';
+import { TaxPage } from './routes/tax';
 import CreditsPage from './routes/financial/credits';
 import MortgagesPage from './routes/financial/mortgages';
 import DepositsPage from './routes/financial/deposits';
@@ -91,7 +95,27 @@ function RootLayout() {
         return <DashboardLoadingScreen />;
     }
 
+    let pendingFamilyToken: string | null = null;
+    if (isSignedIn && location.pathname !== "/family/join") {
+        try {
+            pendingFamilyToken = sessionStorage.getItem("woolet.pendingFamilyJoin");
+        } catch {
+            // Storage may be unavailable; regular navigation still works.
+        }
+    }
+    if (pendingFamilyToken) {
+        return <Navigate to="/family/join" search={{ token: pendingFamilyToken }} replace />;
+    }
+
     if (!isPublicRoute && !isSignedIn) {
+        if (location.pathname === "/family/join") {
+            try {
+                const token = new URLSearchParams(window.location.search).get("token");
+                if (token) sessionStorage.setItem("woolet.pendingFamilyJoin", token);
+            } catch {
+                // Sign-in still works when session storage is unavailable.
+            }
+        }
         return <Navigate to="/login" replace />;
     }
 
@@ -231,6 +255,12 @@ export const investingRoute = createRoute({
     component: InvestingPage,
 });
 
+export const taxRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tax',
+    component: TaxPage,
+});
+
 export const subscriptionsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/subscriptions',
@@ -339,12 +369,34 @@ export const wooRoute = createRoute({
     component: WooPage,
 });
 
+export const familyRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/family',
+    component: FamilyPage,
+});
+export const familyJoinRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/family/join',
+    component: FamilyJoinPage,
+    validateSearch: (search: Record<string, unknown>): { token?: string } => ({
+        token: typeof search.token === 'string' ? search.token : undefined,
+    }),
+});
+export const familyWalletRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/family/wallets/$walletId',
+    component: FamilyWalletPage,
+});
 export const routeTree = rootRoute.addChildren([
+    familyRoute,
+    familyJoinRoute,
+    familyWalletRoute,
     indexRoute,
     accountsRoute,
     spendingRoute,
     debtsRoute,
     investingRoute,
+    taxRoute,
     creditsRoute,
     mortgagesRoute,
     depositsRoute,
