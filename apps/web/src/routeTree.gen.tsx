@@ -145,12 +145,12 @@ function RootLayout() {
                     <SignedIn>
                         {!isAuthRoute && (
                             <header className={cn(
-                                "sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] bg-background/30 backdrop-blur-2xl px-4",
+                                "pointer-events-none absolute inset-x-0 top-0 z-[45] flex h-14 items-center justify-between gap-2 px-4",
                                 "max-[470px]:hidden"
                             )}>
-                                <div className="flex items-center gap-2">
-                                    <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground" />
-                                    <Separator orientation="vertical" className="hidden sm:block mr-2 h-4 opacity-30" />
+                                <div className="pointer-events-auto flex h-10 items-center gap-2 rounded-full border border-black/[0.06] bg-white/60 pl-1.5 pr-4 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-white/10 dark:bg-white/[0.035] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                                    <SidebarTrigger className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground" />
+                                    <Separator orientation="vertical" className="hidden sm:block mr-1 h-4 opacity-30" />
                                     <span className="text-xs font-semibold text-muted-foreground tracking-wide">
                                         {format(new Date(), 'EEEE · MMM d')}
                                     </span>
@@ -163,6 +163,8 @@ function RootLayout() {
                             "flex-1 w-full overflow-y-auto",
                             location.pathname === "/spending" ? "overflow-x-auto" : "overflow-x-hidden",
                             isSignedIn && !isAuthRoute && !isSettingsRoute ? "p-3 md:p-6" : "p-0",
+                            // Header floats over the scroll area; offset content so it starts below it but scrolls underneath.
+                            isSignedIn && !isAuthRoute && (isSettingsRoute ? "min-[471px]:pt-14" : "min-[471px]:pt-[68px] md:pt-20"),
                             !isAuthRoute && (location.pathname === "/woo" ? "max-[470px]:pb-[5.25rem]" : "max-[470px]:pb-[calc(6rem+env(safe-area-inset-bottom))]")
                         )}
                     >
