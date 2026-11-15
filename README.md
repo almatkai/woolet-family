@@ -36,6 +36,33 @@ Woolet is a personal and family finance app built with a full-stack TypeScript a
 
 See [docs/FEATURES.md](docs/FEATURES.md) for the full feature reference.
 
+## 🎬 Walkthrough
+
+Short clips recorded on the live demo (1440×900). Click a preview to play the video.
+
+<table>
+<tr>
+<td width="50%" valign="top"><a href="docs/videos/01-family-dashboard.mp4"><img src="docs/videos/posters/01-family-dashboard.jpg" alt="Family dashboard" width="100%"></a><br><b>Family dashboard</b><br><sub>Budget, who spent what, filters by member</sub></td>
+<td width="50%" valign="top"><a href="docs/videos/03-woo-ai.mp4"><img src="docs/videos/posters/03-woo-ai.jpg" alt="Woo AI" width="100%"></a><br><b>Woo AI</b><br><sub>Ask about the family’s money in plain words</sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/videos/09-woo-receipt.mp4"><img src="docs/videos/posters/09-woo-receipt.jpg" alt="Receipt → transaction" width="100%"></a><br><b>Receipt → transaction</b><br><sub>Woo reads a payment screenshot and drafts the expense</sub></td>
+<td width="50%" valign="top"><a href="docs/videos/02-dashboard-widgets.mp4"><img src="docs/videos/posters/02-dashboard-widgets.jpg" alt="Personal dashboard" width="100%"></a><br><b>Personal dashboard</b><br><sub>Drag-and-drop widgets</sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/videos/05-accounts.mp4"><img src="docs/videos/posters/05-accounts.jpg" alt="Accounts" width="100%"></a><br><b>Accounts</b><br><sub>Cards slide out of the wallet; Family view</sub></td>
+<td width="50%" valign="top"><a href="docs/videos/05b-new-card.mp4"><img src="docs/videos/posters/05b-new-card.jpg" alt="New bank & card skin" width="100%"></a><br><b>New bank & card skin</b><br><sub>Kaspi Bank with a custom Kaspi Gold card</sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/videos/06-spending.mp4"><img src="docs/videos/posters/06-spending.jpg" alt="Spending" width="100%"></a><br><b>Spending</b><br><sub>The month as a receipt; family spending</sub></td>
+<td width="50%" valign="top"><a href="docs/videos/07-subscriptions.mp4"><img src="docs/videos/posters/07-subscriptions.jpg" alt="Subscriptions" width="100%"></a><br><b>Subscriptions</b><br><sub>Calendar and family renewals</sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/videos/08-taxes.mp4"><img src="docs/videos/posters/08-taxes.jpg" alt="US taxes" width="100%"></a><br><b>US taxes</b><br><sub>Estimate, 1040-ES payments, family taxes</sub></td>
+<td width="50%" valign="top"><a href="docs/videos/04-investing.mp4"><img src="docs/videos/posters/04-investing.jpg" alt="Investing" width="100%"></a><br><b>Investing</b><br><sub>AI market digest and portfolio vs S&P 500</sub></td>
+</tr>
+</table>
+
 ## 🎮 Hackathon demo
 
 `/demo` opens a prefilled sample family without registration. The demo switcher lets you view the app as **Dad** (owner), **Mom** (partner) or **Child**, filter navigation to Family focus, or exit the demo.
