@@ -1,3 +1,5 @@
+import { Plus, X } from 'lucide-react';
+import { familyTotals } from './familyTotals';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
@@ -119,14 +121,16 @@ export function FamilyBudgetSheet({
             onClose();
         } catch {
             setError(
-                `Couldn't save the ${label} budget. The rows above it were saved.`,
+                remove
+                    ? `Couldn't remove the ${label} budget. Try again to remove the remaining budgets.`
+                    : `Couldn't save the ${label} budget. The rows above it were saved.`,
             );
         } finally {
             await utils.household.overview.invalidate();
             setBusy(false);
         }
     };
-    const sum = rows.reduce((s, r) => s + Number(r.amount || 0), 0);
+    const sum = familyTotals(rows.map((r) => ({ currencyCode: overview.baseCurrency, amount: r.amount || '0' })))[0]?.amount ?? '0';
     const previous = new Date(`${overview.converted.month}-01T12:00:00`);
     previous.setMonth(previous.getMonth() - 1);
     return (
@@ -189,7 +193,7 @@ export function FamilyBudgetSheet({
                                     Enter an amount greater than zero
                                 </Notice>
                             )}
-                        <h3>Category budgets (optional)</h3>
+                        <h3 className="text-sm font-semibold">Category budgets (optional)</h3>
                         {categoriesQuery.error && (
                             <Notice tone="error">
                                 Couldn't load categories.
@@ -277,7 +281,7 @@ export function FamilyBudgetSheet({
                                             )
                                         }
                                     >
-                                        ×
+                                        <X className="size-4" />
                                     </Button>
                                 </div>
                                 <p className="text-[11px] text-muted-foreground">
@@ -319,9 +323,9 @@ export function FamilyBudgetSheet({
                                 ])
                             }
                         >
-                            + Add category
+                            <Plus className="size-4" /> Add category
                         </Button>
-                        {sum > Number(total) && (
+                        {Number(sum) > Number(total) && (
                             <Notice tone="warning">
                                 Category budgets add up to{' '}
                                 <FamilyMoney
