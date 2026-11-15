@@ -1,31 +1,55 @@
 # Woolet 💰
 
-Woolet is a sophisticated personal finance and investment tracking application built with a modern full-stack TypeScript architecture. It helps users manage their bank accounts, track daily transactions, monitor debts and mortgages, and manage long-term investment portfolios with multi-currency support.
+Woolet is a personal and family finance app built with a full-stack TypeScript architecture. Families share one view of their money, with a common budget, each member's spending and shared wallets. Adults see everything shared and edit only their own records; children get their own wallets with limits. Woolet also tracks bank accounts in several currencies, transactions, debts and mortgages, subscriptions, investments and US taxes, and includes an AI assistant called Woo.
 
 ## 🚀 Features
 
--   **Dashboard**: Overview of your financial health with interactive charts and summaries.
--   **Transaction Management**: Track income and expenses with customizable categories.
--   **Investing Module**: 
-    -   Portfolio tracking with stock search.
-    -   Historical price charting and performance analytics.
-    -   Benchmark comparisons (e.g., S&P 500).
-    -   Multi-currency support for global assets.
--   **Debt & Credits**: Manage what you owe and what others owe you.
--   **Subscriptions**: Monitor recurring payments to avoid "subscription creep".
--   **Banks & Accounts**: Organize multiple bank accounts and deposits.
--   **Data Sync**: Export and import your entire financial history for backup and portability.
--   **Multi-Currency**: Automatic FX conversion for a unified view of your net worth.
+-   **Family mode**: A household of up to 6 people, each signing in with their own Woolet account.
+    -   **Family dashboard** (the default home for family members): a monthly family budget with a pace mark, who spent what, where the money went, daily spending, and recent spending showing who spent vs. who entered it.
+    -   **Family and Personal views** in every finance section. Adults see each other's accounts, spending, debts, loans, subscriptions, investments and taxes, but each person edits only their own.
+    -   **Shared and child wallets**, with weekly/monthly limits per wallet or category. Children see only their own wallet; parents choose whether children see balances.
+    -   **Shared-purchase approvals**: purchases above a set limit become proposals that another adult approves, counters or declines.
+    -   **Roles**: owner, adult (optionally a guardian of the children) and child, with email invitations.
+-   **US Taxes**: Estimate of federal and state income tax for the year.
+    -   2025/2026 brackets, standard and senior deductions, self-employment tax, NIIT, Additional Medicare and the Child Tax Credit.
+    -   States with no income tax or a flat rate are calculated; progressive states use your own effective rate.
+    -   Quarterly 1040-ES schedule with safe-harbor amounts. Log the payments you have made. Income can be filled from your transactions.
+-   **Dashboard**: Drag-and-drop widgets with summaries, charts, shortcuts and spending anomalies.
+-   **Banks & Accounts**: Banks with accounts inside, each holding balances in several currencies. Transfers between your own accounts and deposits.
+-   **Transactions & Spending**: Income and expenses with custom categories, a universal "add" sheet, and spending charts by period and category.
+-   **Split bills & money between users**: Find people by username and split transactions with them. Accept, decline or pay incoming requests in one tap, and assign incoming payments to your accounts.
+-   **Debts, Credits & Mortgages**: What you owe and are owed, loans with payment schedules (including compound interest) and mortgage payments.
+-   **Subscriptions**: List, upcoming and calendar views, payment reminders, and a Chrome extension that picks up subscriptions from billing pages.
+-   **Investing**:
+    -   Stock search, buy/sell trades and manual prices.
+    -   Portfolio performance and price history.
+    -   Benchmark comparison (e.g., S&P 500).
+    -   Investment cash balance and market news.
+-   **Woo, the AI assistant**:
+    -   Chat about your money, including family questions answered with the same numbers as the family dashboard.
+    -   Turns receipts, checks and bank-transfer screenshots into draft transactions you confirm.
+    -   Creates transactions from text, and writes a daily digest.
+-   **Multi-Currency**: Scheduled exchange rates; totals are converted to one currency without ever adding different currencies together unconverted.
+-   **Notifications**: In-app and web push.
+-   **Data**: Export and import your data, or delete it or your whole account.
+-   **Plans**: Free, Pro and Premium via Paddle. Family mode is free.
 
-## 🛠️ Tech Stack
+See [docs/FEATURES.md](docs/FEATURES.md) for the full feature reference.
 
-### Hackathon demo
+## 🎮 Hackathon demo
 
-`/demo` opens a prefilled Martinez family without registration. The login page also offers Alex (owner), Jordan (partner), and Maya (child). The banner switches actors, exits the demo, and optionally filters navigation to Family focus. All features remains available for exploring the wider Woolet product.
+`/demo` opens a prefilled sample family without registration. The demo switcher lets you view the app as **Dad** (owner), **Mom** (partner) or **Child**, filter navigation to Family focus, or exit the demo.
 
-The three accounts are shared by visitors: edits persist and each account has **50 lifetime Woo chat questions shared across all visitors**. Reopening the demo does not reset the quota. Personal identity, billing, invitations, imports and cross-user payments are unavailable; debt/split, subscription, tax and investment records are provided for viewing. Never enter personal information in these shared accounts. Portfolio prices are illustrative sample data.
+The three demo accounts are shared by all visitors:
+-   Edits persist, and each account has **50 lifetime Woo chat questions shared across all visitors**. Reopening the demo does not reset the quota.
+-   Personal identity, billing, invitations, imports and cross-user payments are unavailable.
+-   Debt/split, subscription, tax and investment records are provided for viewing.
+-   Portfolio prices are illustrative sample data.
+-   Never enter personal information in these shared accounts.
 
-After applying the app's database migrations (including `0020_shared_purchase_approval`), provision the synthetic users and data:
+### Provisioning the demo
+
+After applying the database migrations, provision the synthetic users and data:
 
 ```bash
 cd apps/api
@@ -34,9 +58,17 @@ bun scripts/seed-demo.ts --apply
 
 The API build also emits `dist/seed-demo.js` for use inside the production image, where source-only scripts are unavailable.
 
-The script uses the existing server-side Clerk and database credentials, creates only `@demo.woolet.cc` identities, and prints their three non-secret user IDs. It is transactional and idempotent for database data: repeat runs preserve existing demo edits and AI usage. It also adds Jordan's $1,200 washing-machine proposal if the demo family has no purchase proposals yet. Set `DEMO_ENABLED=true` and the printed `DEMO_OWNER_USER_ID`, `DEMO_PARTNER_USER_ID`, `DEMO_CHILD_USER_ID` in the API environment. Keep these IDs configured when disabling new demo sign-ins so existing demo sessions retain their restrictions. `WEB_URL` must identify the public application origin. No new port or Docker network is required.
+The script:
+-   uses the existing server-side Clerk and database credentials;
+-   creates only `@demo.woolet.cc` identities and prints their three non-secret user IDs;
+-   is transactional and idempotent for database data, so repeat runs preserve existing demo edits and AI usage.
 
-The demo reuses Woolet's existing accounts, family wallets, child limits, splits, debts, receipt drafts and AI assistant. New work adds guest access and a shared-purchase approval agreement: purchases strictly above the configured limit (1,000 by default, in the wallet's currency) become proposals. Another adult can approve, counter with a different amount, or decline. Approval records the expense exactly once after checking the current wallet balance; pending purchases do not reserve money. Personal-account transactions and child-wallet limits retain their existing behavior. Goal consequence previews and weekly check-in cards are not part of this implementation.
+Then configure the API environment:
+-   Set `DEMO_ENABLED=true`.
+-   Set the printed `DEMO_OWNER_USER_ID`, `DEMO_PARTNER_USER_ID` and `DEMO_CHILD_USER_ID`. Keep these IDs configured even when you disable new demo sign-ins, so that existing demo sessions keep their restrictions.
+-   Make sure `WEB_URL` is the public application origin.
+
+## 🛠️ Tech Stack
 
 ### Frontend (`apps/web`)
 -   **Framework**: [React](https://reactjs.org/) with [Vite](https://vitejs.dev/)
