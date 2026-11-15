@@ -13,13 +13,13 @@ export const sheetClass =
 export const rowClass =
     'flex min-h-14 items-center gap-3 rounded-2xl px-2.5 py-3 sm:px-3 transition-colors hover:bg-muted/60 dark:hover:bg-white/[0.04]';
 
-export function roleLabel(role: string, isGuardian = false) {
+export function roleLabel(role: string, isGuardian = false, separator: ' · ' | ', ' = ' · ') {
     return role === 'owner'
         ? 'Owner'
         : role === 'child'
           ? 'Child'
           : isGuardian
-            ? 'Adult · Guardian'
+            ? `Adult${separator}Guardian`
             : 'Adult';
 }
 

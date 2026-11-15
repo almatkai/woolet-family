@@ -99,7 +99,7 @@ export function FamilyMemberPage() {
         [overview.error, finances.error, transactions.error].some(
             (error) => error?.data?.code === 'NOT_FOUND' || error?.data?.code === 'FORBIDDEN',
         ) ||
-        (summaryMember && !canOpenMember(summaryMember, summaryMember));
+        (summaryMember && family.data?.me && !canOpenMember(family.data.me, summaryMember));
     if (unavailable)
         return (
             <GlassCard className="p-4 space-y-3">

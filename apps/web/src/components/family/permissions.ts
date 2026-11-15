@@ -38,10 +38,11 @@ export function canEditFamilyBudget(me: { role: Role; isGuardian: boolean }) {
     return me.role === 'owner' || me.isGuardian;
 }
 export function canOpenMember(
-    _viewerMe: { role: Role },
-    member: { canOpen: boolean },
+    viewerMe: { role: Role; isGuardian: boolean },
+    member: { role: Role; canOpen: boolean },
 ) {
-    return member.canOpen;
+    return viewerMe.role !== 'child' && member.canOpen &&
+        (member.role !== 'child' || viewerMe.role === 'owner' || (viewerMe.role === 'adult' && viewerMe.isGuardian));
 }
 export function isMine(item: { isMe: boolean }) {
     return item.isMe;

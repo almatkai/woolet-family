@@ -44,10 +44,7 @@ export function FamilyGroupHeader({
                     </FamilyMemberLink>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                    {roleLabel(member.role, member.isGuardian).replace(
-                        ' · ',
-                        ', ',
-                    )}
+                    {roleLabel(member.role, member.isGuardian, ', ')}
                 </p>
             </div>
             <div className="ml-auto">
