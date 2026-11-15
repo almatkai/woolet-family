@@ -101,7 +101,7 @@ export function FamilyHome({
         date: search.day,
         limit: 8,
     });
-    const taxes = trpc.household.familyTax.useQuery({ taxYear: 2026 });
+    const taxes = trpc.household.familyTax.useQuery({ taxYear: Number(today.slice(0, 4)) as 2025 | 2026 });
     const [allCategories, setAllCategories] = useState(false);
     const overview = query.data as HouseholdOverviewOutput | undefined;
     const financesQuery = trpc.household.familyFinances.useQuery({
@@ -981,7 +981,7 @@ export function FamilyHome({
                                 'Taxes',
                                 FileText,
                                 taxes.data
-                                    ? `${taxes.data.filter((t: FamilyTaxRow) => t.hasProfile).length} profiles for 2026`
+                                    ? `${taxes.data.filter((t: FamilyTaxRow) => t.hasProfile).length} profiles for ${today.slice(0, 4)}`
                                     : taxes.error
                                       ? 'Tax figures unavailable'
                                       : 'Loading profiles…',

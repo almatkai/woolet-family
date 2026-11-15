@@ -59,7 +59,7 @@ export function FamilyMemberPage() {
                 last.nextCursor ?? undefined,
         },
     );
-    const tax = trpc.household.familyTax.useQuery({ taxYear: 2026 });
+    const tax = trpc.household.familyTax.useQuery({ taxYear: Number(localToday().slice(0, 4)) as 2025 | 2026 });
     const wallets = trpc.household.wallets.useQuery({ today: localToday() });
     const data = overview.data as HouseholdOverviewOutput | undefined;
     const holdings = finances.data as FamilyFinancesOutput | undefined;

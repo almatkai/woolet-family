@@ -13,14 +13,14 @@ import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
 import { FamilyMoney } from './shared';
 import { orderFamilyMembers } from './permissions';
 import { useFinanceView } from './useFinanceView';
-import type { HouseholdOverview, FamilyTaxOutput } from './types';
+import { localToday, type HouseholdOverview, type FamilyTaxOutput } from './types';
 
 export function FamilyTax({
     family,
 }: {
     family: NonNullable<HouseholdOverview>;
 }) {
-    const [taxYear, setTaxYear] = useState<2025 | 2026>(2026);
+    const [taxYear, setTaxYear] = useState<2025 | 2026>(() => Number(localToday().slice(0, 4)) as 2025 | 2026);
     const query = trpc.household.familyTax.useQuery({ taxYear });
     const data = query.data as FamilyTaxOutput | undefined;
     const { setView } = useFinanceView();
