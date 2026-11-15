@@ -15,6 +15,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FamilyMoney, rowClass, sectionLabel } from './shared';
 import type {
@@ -37,7 +38,8 @@ type FinancePath =
     | '/family';
 
 export function FamilyFinancesNav({
-    finances,
+    financesQuery,
+    finances: loadedFinances,
     overview,
     spent,
     monthName,
@@ -49,6 +51,7 @@ export function FamilyFinancesNav({
     month,
     search,
 }: {
+    financesQuery: { error: unknown; refetch: () => unknown };
     finances: FamilyFinancesOutput | undefined;
     overview: HouseholdOverviewOutput | undefined;
     spent: number;
@@ -61,6 +64,7 @@ export function FamilyFinancesNav({
     month: string;
     search: { currency?: string };
 }) {
+    const finances = financesQuery.error ? undefined : loadedFinances;
     const financeMoney = (amount: string | number) => finances ? (
         <FamilyMoney amount={amount} currency={finances.displayCurrency} />
     ) : '—';
@@ -68,6 +72,14 @@ export function FamilyFinancesNav({
         <section className="space-y-3">
             <h2 className={sectionLabel}>Family finances</h2>
             <GlassCard className="p-2 sm:p-3">
+                {!!financesQuery.error && (
+                    <div role="alert" className="px-3 text-sm">
+                        Couldn't load the figures.
+                        <Button variant="ghost" size="sm" onClick={() => void financesQuery.refetch()}>
+                            Try again
+                        </Button>
+                    </div>
+                )}
                 <div className="grid lg:grid-cols-2 divide-y divide-border dark:divide-white/[0.06]">
                     {(
                         [

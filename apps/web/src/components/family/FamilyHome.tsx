@@ -153,41 +153,41 @@ export function FamilyHome({
                     {...{ monthName, date, move, update, currency, overview }}
                 />
             </div>
-            <div className="grid gap-4 lg:grid-cols-5">
-                <div className="lg:col-span-3">
-                    {query.error ? (
-                        failure(() => void query.refetch())
-                    ) : !overview ? (
-                        <Skeleton className="h-40 rounded-[22px] lg:h-full" />
-                    ) : (
-                        <FamilyBudgetCard
-                            className="h-full"
-                            data={{ family, overview, budget, spent, currency, current, day, days, pace, monthName, comparison, previous, date }}
-                            controls={{ expanded, setExpanded, setEditing, money }}
-                        />
-                    )}
-                </div>
-                <div className="lg:col-span-2">
-                    {financesQuery.error ? (
-                        failure(() => void financesQuery.refetch())
-                    ) : !finances ? (
-                        <Skeleton className="h-40 rounded-[22px] lg:h-full" />
-                    ) : (
-                        <FamilyPositionCard
-                            className="h-full"
-                            {...{ finances, total, currency, date }}
-                        />
-                    )}
-                </div>
-            </div>
-            {!query.error && (
-                <div className="grid gap-4 lg:grid-cols-5">
-                    <div className="contents lg:block lg:col-span-3 lg:space-y-4">
-                        {memberOverview.error ? failure(() => void memberOverview.refetch()) : <FamilyWhoSpent {...{ members, memberTotal, monthName, search, update, currency, family }} overview={memberOverview.data} />}
-                        <FamilyDailySpending {...{ overview, search, update, today, currency, money }} />
+            {query.error ? failure(() => void query.refetch()) : (
+                <>
+                    <div className="grid gap-4 lg:grid-cols-5">
+                        <div className="lg:col-span-3">
+                            {!overview ? (
+                                <Skeleton className="h-40 rounded-[22px] lg:h-full" />
+                            ) : (
+                                <FamilyBudgetCard
+                                    className="h-full"
+                                    data={{ family, overview, budget, spent, currency, current, day, days, pace, monthName, comparison, previous, date }}
+                                    controls={{ expanded, setExpanded, setEditing, money }}
+                                />
+                            )}
+                        </div>
+                        <div className="lg:col-span-2">
+                            {financesQuery.error ? (
+                                failure(() => void financesQuery.refetch())
+                            ) : !finances ? (
+                                <Skeleton className="h-40 rounded-[22px] lg:h-full" />
+                            ) : (
+                                <FamilyPositionCard
+                                    className="h-full"
+                                    {...{ finances, total, currency, date }}
+                                />
+                            )}
+                        </div>
                     </div>
-                    <FamilyWhereItWent {...{ overview, categoryOverview, categoryData, allCategories, setAllCategories, search, update, currency, monthName, failure }} />
-                </div>
+                    <div className="grid gap-4 lg:grid-cols-5">
+                        <div className="contents lg:block lg:col-span-3 lg:space-y-4">
+                            {memberOverview.error ? failure(() => void memberOverview.refetch()) : <FamilyWhoSpent {...{ members, memberTotal, monthName, search, update, currency, family }} overview={memberOverview.data} />}
+                            <FamilyDailySpending {...{ overview, search, update, today, currency, money }} />
+                        </div>
+                        <FamilyWhereItWent {...{ overview, categoryOverview, categoryData, allCategories, setAllCategories, search, update, currency, monthName, failure }} />
+                    </div>
+                </>
             )}
             <FamilyRecentSpending {...{ search, update, overview, month, monthName, transactions, failure }} />
             <FamilyFinancesNav {...{ financesQuery, finances, overview, spent, monthName, money, taxes, taxYear, wallets, family, month, search }} />

@@ -1,11 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { httpBatchLink, loggerLink } from '@trpc/client';
 import { Toaster } from './components/ui/sonner';
 import { trpc } from './lib/trpc';
+import { FinanceQueryClient, isUnavailableMemberError } from './lib/family-query-errors';
 import { routeTree } from './routeTree.gen';
 import './index.css';
 import superjson from 'superjson';
@@ -31,13 +32,13 @@ if (import.meta.env.PROD && VITE_CLERK_PUBLISHABLE_KEY?.startsWith('pk_test_')) 
 initErrorTracking();
 
 // Create query client
-const queryClient = new QueryClient({
+const queryClient = new FinanceQueryClient({
     defaultOptions: {
         queries: {
             staleTime: 1000 * 60, // 1 minute
             retry: 1,
             onError: (err: any) => {
-                PostHogErrorTracking.captureException(err);
+                if (!isUnavailableMemberError(err)) PostHogErrorTracking.captureException(err);
             },
         },
         mutations: {
@@ -54,8 +55,9 @@ const trpcClient = trpc.createClient({
     links: [
         loggerLink({
             enabled: (opts) =>
-                import.meta.env.DEV ||
-                (opts.direction === 'down' && opts.result instanceof Error),
+                !(opts.direction === 'down' && isUnavailableMemberError(opts.result)) &&
+                (import.meta.env.DEV ||
+                (opts.direction === 'down' && opts.result instanceof Error)),
             logger: (opts) => {
                 if (opts.direction === 'down' && opts.result instanceof Error) {
                     PostHogErrorTracking.captureException(opts.result);
