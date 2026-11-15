@@ -50,7 +50,6 @@ export function FamilySubscriptions({
                         label="Family subscriptions"
                         totals={totals(data.members)}
                         currency={data.displayCurrency}
-                        unconvertedCurrencies={data.unconvertedCurrencies}
                         suffix=" a month"
                     />
                     {!data.members.some(

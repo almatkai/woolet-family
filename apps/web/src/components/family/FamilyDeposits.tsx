@@ -47,7 +47,6 @@ export function FamilyDeposits({
                         label="Family deposits balance"
                         totals={totals(data.members)}
                         currency={data.displayCurrency}
-                        unconvertedCurrencies={data.unconvertedCurrencies}
                     />
                     {!data.members.some((member) => member.deposits.length) && (
                         <p className="text-sm text-muted-foreground">

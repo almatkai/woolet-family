@@ -64,13 +64,11 @@ export function FamilyLoans<T extends Loan>({
                         label={`Family ${title.toLowerCase()} remaining`}
                         totals={totals(data.members, 'remaining')}
                         currency={data.displayCurrency}
-                        unconvertedCurrencies={data.unconvertedCurrencies}
                     />
                     <FamilySectionTotal
                         label="Monthly payments"
                         totals={totals(data.members, 'monthlyPayment')}
                         currency={data.displayCurrency}
-                        unconvertedCurrencies={data.unconvertedCurrencies}
                     />
                     {!data.members.some((member) => rows(member).length) && (
                         <p className="text-sm text-muted-foreground">
