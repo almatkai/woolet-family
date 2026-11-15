@@ -147,18 +147,27 @@ export function FamilySpending({
                 <FamilyGroupList>
                     <div className="p-3 space-y-2">
                         <h2 className="text-sm font-semibold">
-                            Filtered spending
+                            {search.day
+                                ? 'Month total'
+                                : search.member || search.category
+                                  ? 'Filtered spending'
+                                  : 'Spending'}
                         </h2>
                         {(
                             overview.filtered ?? overview.converted
                         ).currencies.map((c) => (
                             <p key={c.currencyCode}>
+                                ≈
                                 <FamilyMoney
                                     amount={c.expense}
                                     currency={c.currencyCode}
-                                />
+                                />{' '}
+                                spent
                             </p>
                         ))}
+                        <p className="text-xs text-muted-foreground">
+                            Converted to {currency}
+                        </p>
                     </div>
                 </FamilyGroupList>
             )}

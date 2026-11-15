@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
-import { trpc } from '@/lib/trpc';
-import { canOpenMember } from './permissions';
+import { visibleFamilyMember } from './permissions';
 import { useFinanceView } from './useFinanceView';
-import { localToday, type HouseholdOverviewOutput } from './types';
 
 export function FamilyMemberLink({
     memberId,
@@ -13,18 +11,12 @@ export function FamilyMemberLink({
     children: ReactNode;
 }) {
     const { family } = useFinanceView();
-    const query = trpc.household.overview.useQuery(
-        { month: localToday().slice(0, 7) },
-        { enabled: !!family },
-    );
-    const member = (
-        query.data as HouseholdOverviewOutput | undefined
-    )?.members.find((member) => member.memberId === memberId);
-    return family && member && canOpenMember(family.me, member) ? (
+    const member = family?.members.find((member) => member.id === memberId);
+    return family && member && visibleFamilyMember(family.me, member) ? (
         <Link
             className="underline underline-offset-2"
             to="/family/members/$memberId"
-            params={{ memberId: member.memberId }}
+            params={{ memberId: member.id }}
             onClick={(event) => event.stopPropagation()}
         >
             {children}

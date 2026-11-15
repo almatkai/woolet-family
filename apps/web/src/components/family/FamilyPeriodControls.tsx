@@ -22,6 +22,7 @@ export function FamilyPeriodControls({
     move: (n: number) => void;
     update: (patch: {
         month?: string;
+        day?: string;
         member?: string;
         category?: string;
         currency?: string;
@@ -56,6 +57,7 @@ export function FamilyPeriodControls({
                 onClick={() =>
                     update({
                         month: undefined,
+                        day: undefined,
                         member: undefined,
                         category: undefined,
                     })
