@@ -9,6 +9,7 @@ import { familyWallets, householdInvitations as invites, householdMembers as mem
 import { canEditHouseholdSettings, canManageMembers, getMembership } from '../lib/household/policy';
 import * as clerkEmail from '../lib/household/clerk-email';
 import { householdWalletProcedures } from './household-wallets';
+import { householdBudgetProcedures } from './household-budgets';
 import { householdWalletQueries } from './household-wallet-queries';
 
 type DB = typeof database;
@@ -41,6 +42,7 @@ async function invitationState(db: DB, userId: string, token: string) {
 }
 
 export const householdRouter = router({
+    ...householdBudgetProcedures,
     ...householdWalletProcedures,
     ...householdWalletQueries,
     get: protectedProcedure.query(async ({ ctx }) => {
