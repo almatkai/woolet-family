@@ -13,13 +13,13 @@ export const sheetClass =
 export const rowClass =
     'flex min-h-14 items-center gap-3 rounded-2xl px-2.5 py-3 sm:px-3 transition-colors hover:bg-muted/60 dark:hover:bg-white/[0.04]';
 
-export function roleLabel(role: string, isGuardian = false) {
+export function roleLabel(role: string, isGuardian = false, separator: ' · ' | ', ' = ' · ') {
     return role === 'owner'
         ? 'Owner'
         : role === 'child'
           ? 'Child'
           : isGuardian
-            ? 'Adult · Guardian'
+            ? `Adult${separator}Guardian`
             : 'Adult';
 }
 
@@ -200,6 +200,7 @@ export function InlineConfirm({
     }, []);
     return (
         <div
+            data-inline-confirm=""
             className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-3"
             onKeyDown={(event) => {
                 if (event.key === 'Escape') {
@@ -232,6 +233,18 @@ export function InlineConfirm({
             </div>
         </div>
     );
+}
+
+/**
+ * Radix sheets listen for Escape on the document in the capture phase, before
+ * InlineConfirm's own handler runs. Pass this as SheetContent's onEscapeKeyDown
+ * so Esc inside an inline confirm only cancels the confirm.
+ */
+export function keepSheetOpenForInlineConfirm(event: KeyboardEvent) {
+    const target = event.target;
+    if (target instanceof Element && target.closest('[data-inline-confirm]')) {
+        event.preventDefault();
+    }
 }
 
 export const staticRowClass = rowClass.split(' transition-colors')[0];

@@ -1,4 +1,5 @@
 import { ActionButton } from '@/components/ui/action-button';
+import { ScopeSwitchRow } from '@/components/family/ScopeSwitch';
 import React from 'react';
 import { SignedIn, SignedOut } from '@clerk/clerk-react';
 import { Navigate } from '@tanstack/react-router';
@@ -46,7 +47,10 @@ export function Dashboard() {
 
             <SignedIn>
                 {isPhone === undefined ? null : isPhone ? (
-                    <MobileHome />
+                    <>
+                        <ScopeSwitchRow />
+                        <MobileHome />
+                    </>
                 ) : (
                 <>
                 <PageHeader title="Dashboard" variant="two-mixed">
@@ -97,6 +101,7 @@ export function Dashboard() {
                         </>
                     )}
                 </PageHeader>
+                <ScopeSwitchRow />
 
                 <SpendingAnomalyCard />
 

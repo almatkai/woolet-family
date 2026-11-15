@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ScopeSwitchRow } from '@/components/family/ScopeSwitch';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -116,6 +117,7 @@ export default function MortgagesPage() {
                     Add Mortgage
                 </Button>
             </PageHeader>
+            <ScopeSwitchRow />
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                 <StatTile

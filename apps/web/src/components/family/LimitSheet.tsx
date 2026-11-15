@@ -21,7 +21,13 @@ import {
     SheetTitle,
     SheetDescription,
 } from '@/components/ui/sheet';
-import { InlineConfirm, Notice, sectionLabel, sheetClass } from './shared';
+import {
+    InlineConfirm,
+    Notice,
+    keepSheetOpenForInlineConfirm,
+    sectionLabel,
+    sheetClass,
+} from './shared';
 import { limitDates } from './LimitsCard';
 import type { FamilyLimit, FamilyWallet, LimitPeriod } from './types';
 type Row = { key: string; categoryId: string; amount: string };
@@ -46,7 +52,9 @@ export function LimitSheet({
         }[]
     ).filter((c) => c.userId === null && c.type === 'expense');
     const initial =
-        limits.find((l) => l.categoryId === null)?.period ?? 'weekly';
+        limits.find((l) => l.categoryId === null)?.period ??
+        limits[0]?.period ??
+        'weekly';
     const [period, setPeriod] = useState<LimitPeriod>(initial);
     const [total, setTotal] = useState(
         limits.find((l) => l.period === initial && l.categoryId === null)
@@ -144,6 +152,7 @@ export function LimitSheet({
             <SheetContent
                 side={compact ? 'bottom' : 'right'}
                 className={sheetClass}
+                onEscapeKeyDown={keepSheetOpenForInlineConfirm}
             >
                 <SheetHeader>
                     <SheetTitle>Limits for {wallet.name}</SheetTitle>

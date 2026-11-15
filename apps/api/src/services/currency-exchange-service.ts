@@ -41,8 +41,11 @@ class CurrencyExchangeService {
      *   rate(KZT → USD) = 1 / 450 ≈ 0.00222
      *   rate(KZT → KZT) = 1
      */
-    async getExchangeRates(baseCurrency: string = 'USD'): Promise<Record<string, number>> {
-        const usdRates = await this.getUsdRates();
+    async getExchangeRates(baseCurrency: string = 'USD', options: { storedOnly?: boolean } = {}): Promise<Record<string, number>> {
+        // Family queries are read-only and must never refresh rates via the API.
+        const usdRates = options.storedOnly
+            ? await this.getUsdRatesFromCacheOrDbOnly() ?? { USD: 1 }
+            : await this.getUsdRates();
 
         // If base is USD, return as-is
         if (baseCurrency === 'USD') {
@@ -51,7 +54,10 @@ class CurrencyExchangeService {
 
         // Cross-rate conversion: rate(base → X) = rate(USD → X) / rate(USD → base)
         const usdToBase = usdRates[baseCurrency];
-        if (!usdToBase) {
+        if (!Number.isFinite(usdToBase) || usdToBase <= 0) {
+            // Returning USD-based rates under another base would mislabel money.
+            // With no rate to the requested base, only that currency is convertible.
+            if (options.storedOnly) return { [baseCurrency]: 1 };
             console.warn(`⚠️  Base currency ${baseCurrency} not found in USD rates, falling back to USD`);
             return usdRates;
         }

@@ -1,4 +1,5 @@
 import { ActionButton } from '@/components/ui/action-button';
+import { ScopeSwitchRow } from '@/components/family/ScopeSwitch';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -715,6 +716,7 @@ export function DebtsPage() {
                     }
                 />
             </PageHeader>
+            <ScopeSwitchRow />
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                 <StatTile

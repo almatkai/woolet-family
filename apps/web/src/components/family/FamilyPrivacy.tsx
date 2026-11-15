@@ -131,7 +131,7 @@ export function FamilyPrivacy({
                     ? list[0]
                     : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`}
                 .<br />
-                Adults never see each other's personal accounts.
+                Adults in the family see each other's accounts, spending, loans, investments and taxes. Each person changes only their own.
             </p>
         </section>
     );

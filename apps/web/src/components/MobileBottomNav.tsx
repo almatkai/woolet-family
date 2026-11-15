@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/sheet';
 
 const moreItems = [
+    { title: 'Family', url: '/family', icon: HeartHandshake },
     { title: 'Subscriptions', url: '/subscriptions', icon: CalendarClock },
     { title: 'Investing', url: '/investing', icon: TrendingUp },
     { title: 'Debts', url: '/debts', icon: Users },
@@ -39,7 +40,6 @@ const moreItems = [
     { title: 'Mortgages', url: '/financial/mortgages', icon: Building2 },
     { title: 'Deposits', url: '/financial/deposits', icon: PiggyBank },
     { title: 'Taxes', url: '/tax', icon: Calculator },
-    { title: 'Family', url: '/family', icon: HeartHandshake },
     { title: 'Settings', url: '/settings', icon: Settings },
 ];
 

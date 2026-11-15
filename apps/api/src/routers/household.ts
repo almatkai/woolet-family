@@ -10,6 +10,12 @@ import { familyWallets, householdInvitations as invites, householdMembers as mem
 import { canEditHouseholdSettings, canManageMembers, getMembership } from '../lib/household/policy';
 import * as clerkEmail from '../lib/household/clerk-email';
 import { householdWalletProcedures } from './household-wallets';
+import { householdMemberFinanceProcedures } from './household-member-finances';
+import { householdOverviewProcedures } from './household-overview';
+import { householdBudgetProcedures } from './household-budgets';
+import { householdFamilyTaxProcedures } from './household-family-tax';
+import { householdFamilyFinanceProcedures } from './household-family-finances';
+import { householdFamilyTransactionProcedures } from './household-family-transactions';
 import { householdWalletQueries } from './household-wallet-queries';
 import { householdPurchaseProcedures } from './household-purchases';
 
@@ -43,6 +49,12 @@ async function invitationState(db: DB, userId: string, token: string) {
 }
 
 export const householdRouter = router({
+    ...householdMemberFinanceProcedures,
+    ...householdFamilyTransactionProcedures,
+    ...householdFamilyFinanceProcedures,
+    ...householdFamilyTaxProcedures,
+    ...householdOverviewProcedures,
+    ...householdBudgetProcedures,
     ...householdWalletProcedures,
     ...householdWalletQueries,
     ...householdPurchaseProcedures,

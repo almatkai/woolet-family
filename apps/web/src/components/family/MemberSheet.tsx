@@ -1,4 +1,9 @@
-import { Notice, InlineConfirm, sheetClass } from './shared';
+import {
+    Notice,
+    InlineConfirm,
+    keepSheetOpenForInlineConfirm,
+    sheetClass,
+} from './shared';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
@@ -55,6 +60,7 @@ export function MemberSheet({
             <SheetContent
                 side={compact ? 'bottom' : 'right'}
                 className={sheetClass}
+                onEscapeKeyDown={keepSheetOpenForInlineConfirm}
             >
                 <SheetHeader>
                     <SheetTitle>{member.name}</SheetTitle>

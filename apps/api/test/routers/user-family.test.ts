@@ -60,7 +60,7 @@ describe('family-aware user operations', () => {
             insert: () => ({ values: async () => {} }),
         } as any });
         const result = await userRouter.createCaller(ctx).exportAllData();
-        for (const key of ['households', 'householdMembers', 'householdInvitations', 'familyWallets', 'familyWalletTransactions', 'familyBudgetLimits']) expect(result.data).not.toHaveProperty(key);
+        for (const key of ['households', 'householdMembers', 'householdInvitations', 'familyWallets', 'familyWalletTransactions', 'familyBudgetLimits', 'householdBudgets', 'household_budgets']) expect(result.data).not.toHaveProperty(key);
     });
     test('import ignores family keys, including malformed family data', async () => {
         const ctx = createMockContext();
@@ -69,7 +69,7 @@ describe('family-aware user operations', () => {
         (ctx.db as any).transaction = (fn: any) => fn(tx);
         const cache = spyOn(investingCache, 'invalidatePattern').mockResolvedValue();
         try {
-            await userRouter.createCaller(ctx).importData({ data: { households: { secret: true }, householdMembers: null, familyWallets: [{ id: 'other' }], family_wallet_transactions: 'invalid' } });
+            await userRouter.createCaller(ctx).importData({ data: { households: { secret: true }, householdMembers: null, familyWallets: [{ id: 'other' }], family_wallet_transactions: 'invalid', householdBudgets: { ignored: true }, household_budgets: 'invalid' } });
             expect(inserted).not.toHaveBeenCalled();
         } finally {
             cache.mockRestore();

@@ -58,6 +58,19 @@ export const familyBudgetLimits = pgTable('family_budget_limits', {
     updatedByUserId: text('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }), createdAt: createdAt(), updatedAt: updatedAt(),
 }, t => ({ positive: check('family_limit_positive', sql`${t.amount} > 0`), total: uniqueIndex('family_limits_total_unique').on(t.walletId, t.period).where(sql`${t.categoryId} IS NULL`), category: uniqueIndex('family_limits_category_unique').on(t.walletId, t.categoryId, t.period).where(sql`${t.categoryId} IS NOT NULL`) }));
 
+export const householdBudgets = pgTable('household_budgets', {
+    id: id(), householdId: uuid('household_id').references(() => households.id, { onDelete: 'cascade' }).notNull(),
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
+    currencyCode: text('currency_code').references(() => currencies.code).notNull(),
+    amount: decimal('amount', { precision: 14, scale: 2 }).notNull(),
+    updatedByUserId: text('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(), updatedAt: updatedAt(),
+}, t => ({
+    positive: check('household_budget_positive', sql`${t.amount} > 0`),
+    total: uniqueIndex('household_budgets_total_unique').on(t.householdId).where(sql`${t.categoryId} IS NULL`),
+    category: uniqueIndex('household_budgets_category_unique').on(t.householdId, t.categoryId).where(sql`${t.categoryId} IS NOT NULL`),
+}));
+
 export type PurchaseProposalEvent = { action: 'proposed' | 'countered' | 'approved' | 'declined'; byUserId: string; amount: string; at: string };
 export const familyPurchaseProposals = pgTable('family_purchase_proposals', {
     id: id(), householdId: uuid('household_id').references(() => households.id, { onDelete: 'cascade' }).notNull(),
