@@ -1,4 +1,5 @@
 import { FamilyPrivacy } from '@/components/family/FamilyPrivacy';
+import { PurchaseApprovals } from '@/components/family/PurchaseApprovals';
 import { ChildFamilyView } from '@/components/family/ChildFamilyView';
 import { FamilyTransactionSheet } from '@/components/family/FamilyTransactionSheet';
 import { FamilyWallets } from '@/components/family/FamilyWallets';
@@ -9,6 +10,7 @@ import { LeaveFamily } from '@/components/family/LeaveFamily';
 import { useState } from 'react';
 import { HeartHandshake, Wallet, PiggyBank, Plus } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { useDemoIdentity } from '@/lib/demo';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { ActionButton } from '@/components/ui/action-button';
@@ -19,7 +21,6 @@ import { CreateFamilySheet } from '@/components/family/CreateFamilySheet';
 import {
     MoneyTotals,
     FamilyMoney,
-    sectionLabel,
 } from '@/components/family/shared';
 import { familyPermissions, isFull } from '@/components/family/permissions';
 import {
@@ -28,7 +29,9 @@ import {
     type FamilyWalletsResponse,
 } from '@/components/family/types';
 export function FamilyPage() {
+    const { isDemo } = useDemoIdentity();
     const [transactionOpen, setTransactionOpen] = useState(false);
+    const [transactionWalletId, setTransactionWalletId] = useState<string | undefined>();
     const [walletOpen, setWalletOpen] = useState(false);
     const [open, setOpen] = useState(false);
     const [inviteOpen, setInviteOpen] = useState(false);
@@ -43,7 +46,7 @@ export function FamilyPage() {
     const data = walletsQuery.data as FamilyWalletsResponse | undefined;
     const header = (
         <PageHeader
-            variant={permissions?.isOwner ? 'two-with-text' : 'one'}
+            variant={permissions?.isOwner && !isDemo ? 'two-with-text' : 'one'}
             title="Family"
             subtitle={
                 family
@@ -52,7 +55,7 @@ export function FamilyPage() {
             }
         >
             <>
-                {family && permissions?.isOwner ? (
+                {family && permissions?.isOwner && !isDemo ? (
                     <ActionButton
                         variant="secondary"
                         className="flex-1 sm:flex-none"
@@ -181,9 +184,6 @@ export function FamilyPage() {
     return (
         <div className="space-y-4 md:space-y-6">
             {header}
-            <p className={`${sectionLabel} sm:hidden`}>
-                {family.household.name}
-            </p>
             <div
                 className={`grid grid-cols-2 gap-3 ${permissions?.canManageWallets ? 'lg:grid-cols-3' : ''}`}
             >
@@ -247,6 +247,7 @@ export function FamilyPage() {
                     }
                 />
             </div>
+            <PurchaseApprovals wallets={wallets} onNewPurchase={() => { setTransactionWalletId(wallets.find(wallet => wallet.kind === 'shared' && wallet.canWrite)?.id); setTransactionOpen(true); }} />
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
                 <div className="lg:col-span-3">
                     <FamilyWallets
@@ -258,17 +259,19 @@ export function FamilyPage() {
                 <div className="space-y-4 lg:col-span-2">
                     <FamilyMembers
                         family={family}
+                        readOnly={isDemo}
                         onInvite={() => setInviteOpen(true)}
                     />
                     <FamilyPrivacy family={family} />
                 </div>
             </div>
-            <LeaveFamily family={family} />
+            {!isDemo && <LeaveFamily family={family} />}
             {transactionOpen && (
                 <FamilyTransactionSheet
                     open
                     mode="add"
                     wallets={wallets}
+                    presetWalletId={transactionWalletId}
                     onOpenChange={setTransactionOpen}
                 />
             )}

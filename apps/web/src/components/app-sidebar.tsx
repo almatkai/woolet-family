@@ -51,7 +51,9 @@ import { PricingCtaBanner } from '@/components/PricingCtaBanner';
 import { NotificationsMenu } from '@/components/NotificationsMenu';
 import { usePricing } from '@/components/PricingContext';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { familyFocusHiddenPaths, useDemoIdentity, useDemoScope } from '@/lib/demo';
 
 const navGroups = [
     {
@@ -90,6 +92,8 @@ const AccountIcons = {
 // comingSoonItems removed (unused)
 
 export function AppSidebar() {
+    const { familyOnly } = useDemoScope();
+    const { isDemo } = useDemoIdentity();
     const router = useRouterState();
     const { user } = useUser();
     const { data: limitsData } = trpc.user.getLimits.useQuery();
@@ -131,7 +135,7 @@ export function AppSidebar() {
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu className="gap-0.5">
-                                {group.items.map((item) => (
+                                {group.items.filter(item => !familyOnly || !familyFocusHiddenPaths.has(item.url)).map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton asChild isActive={isActive(item.url)} className={navButtonClass}>
                                             <Link to={item.url} {...preloadProps}>
@@ -219,10 +223,10 @@ export function AppSidebar() {
                                 align="end"
                                 sideOffset={4}
                             >
-                                <DropdownMenuItem onClick={() => setAccountDialogOpen(true)}>
+                                {!isDemo && <DropdownMenuItem onClick={() => setAccountDialogOpen(true)}>
                                     <User className="size-4 mr-2" />
                                     Account
-                                </DropdownMenuItem>
+                                </DropdownMenuItem>}
                                 <DropdownMenuItem asChild>
                                     <Link to="/settings" className="flex items-center" {...preloadProps}>
                                         <Settings className="size-4 mr-2" />
@@ -237,14 +241,27 @@ export function AppSidebar() {
             </SidebarFooter>
 
             {/* Account Dialog - Woolet-owned profile and Paddle billing */}
-            {accountDialogOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setAccountDialogOpen(false)}>
-                    <div className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[#202126] text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                        <AccountPanel user={user} onClose={() => setAccountDialogOpen(false)} />
-                    </div>
-                </div>
-            )}
+            {accountDialogOpen && <AccountDialog user={user} onClose={() => setAccountDialogOpen(false)} />}
         </Sidebar>
+    );
+}
+
+// Portaled to <body>: the sidebar's backdrop-filter creates a containing block,
+// which would otherwise trap this fixed overlay inside the sidebar.
+function AccountDialog({ user, onClose }: { user: ReturnType<typeof useUser>['user']; onClose: () => void }) {
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [onClose]);
+
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
+            <div role="dialog" aria-modal="true" aria-label="Account" className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[#202126] text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <AccountPanel user={user} onClose={onClose} />
+            </div>
+        </div>,
+        document.body,
     );
 }
 

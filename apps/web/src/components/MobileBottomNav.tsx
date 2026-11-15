@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { UniversalAddSheet } from '@/components/UniversalAddSheet';
 import { MomoAvatar } from '@/components/ai/MomoAvatar';
 import { Momo } from '@/components/ai/Momo';
+import { familyFocusHiddenPaths, useDemoScope } from '@/lib/demo';
 import {
     Sheet,
     SheetContent,
@@ -43,6 +44,7 @@ const moreItems = [
 ];
 
 export function MobileBottomNav() {
+    const { familyOnly } = useDemoScope();
     const router = useRouterState();
     const currentPath = router.location.pathname;
     const [addOpen, setAddOpen] = useState(false);
@@ -93,7 +95,7 @@ export function MobileBottomNav() {
                         </div>
                     </SheetHeader>
                     <div className="grid grid-cols-4 gap-2 pb-4">
-                        {moreItems.map((item) => (
+                        {moreItems.filter(item => !familyOnly || !familyFocusHiddenPaths.has(item.url)).map((item) => (
                             <Link
                                 key={item.title}
                                 to={item.url}

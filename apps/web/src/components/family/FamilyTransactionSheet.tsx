@@ -91,6 +91,9 @@ export function FamilyTransactionSheet({
         (w) => w.id === (type === 'transfer' ? from : walletId),
     );
     const currency = wallet?.currencyCode ?? preset?.currencyCode ?? '';
+    const checksAgreement = type === 'expense' && wallet?.kind === 'shared';
+    const agreementQuery = trpc.household.purchaseAgreement.useQuery(undefined, { enabled: open && checksAgreement });
+    const needsApproval = checksAgreement && agreementQuery.data && Number(amount) > Number(agreementQuery.data.limit);
     const checksLimits = type !== 'income' && wallet?.kind === 'child';
     const fetchedLimits = trpc.household.limits.useQuery(
         { walletId: wallet?.id ?? '', today: date || localToday() },
@@ -109,6 +112,12 @@ export function FamilyTransactionSheet({
                   .sort((a, b) => Number(a.remaining) - Number(b.remaining))
             : [];
     const success = (result: AddTransactionResult | TransferResult) => {
+        if ('approvalRequired' in result && result.approvalRequired) {
+            void utils.household.purchaseProposals.invalidate();
+            toast.success('Sent for approval. Nothing spent yet.');
+            onOpenChange(false);
+            return;
+        }
         for (const key of [
             'wallets',
             'walletTransactions',
@@ -223,6 +232,7 @@ export function FamilyTransactionSheet({
                             return;
                         if (
                             busy ||
+                            (checksAgreement && (agreementQuery.isLoading || agreementQuery.error)) ||
                             (checksLimits &&
                                 (fetchedLimits.isLoading || fetchedLimits.error)) ||
                             (over && isChildActor(mode, preset))
@@ -357,6 +367,7 @@ export function FamilyTransactionSheet({
                                     Enter an amount greater than zero
                                 </Notice>
                             )}
+                        {needsApproval && <p className="text-sm text-muted-foreground">Over the <FamilyMoney amount={agreementQuery.data.limit} currency={currency} /> shared purchase limit. Another adult must approve this before any money leaves {wallet?.name}.</p>}
                         {limit && (
                             <p className="text-xs text-muted-foreground">
                                 {money(Math.max(0, Number(limit.remaining)))}{' '}
@@ -498,6 +509,7 @@ export function FamilyTransactionSheet({
                     {mutation.error && !serverViolation && (
                         <Notice tone="error">{mutation.error.message}</Notice>
                     )}
+                    {checksAgreement && agreementQuery.error && <Notice tone="error">Couldn't load the shared purchase agreement. <Button type="button" variant="outline" onClick={() => void agreementQuery.refetch()}>Try again</Button></Notice>}
                     {checksLimits && fetchedLimits.error && (
                         <Notice tone="error">
                             {fetchedLimits.error.message}
@@ -512,8 +524,10 @@ export function FamilyTransactionSheet({
                     )}
                     <Button
                         className="w-full"
+                        variant={needsApproval ? 'neutral' : 'default'}
                         disabled={
                             busy ||
+                            (checksAgreement && (agreementQuery.isLoading || !!agreementQuery.error)) ||
                             !wallet ||
                             !(Number(amount) > 0) ||
                             (type === 'transfer' && (!to || from === to)) ||
@@ -533,7 +547,7 @@ export function FamilyTransactionSheet({
                                     : 'Transfer'
                                 : type === 'income'
                                   ? 'Add income'
-                                  : 'Add expense'}
+                                  : needsApproval ? 'Send for approval' : 'Add expense'}
                     </Button>
                 </form>
             </SheetContent>

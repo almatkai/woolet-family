@@ -1,0 +1,802 @@
+[
+  {
+    "actor": "owner",
+    "daysAgo": 3,
+    "type": "income",
+    "amount": "3550.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Tech employer"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 17,
+    "type": "income",
+    "amount": "3550.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Tech employer"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 31,
+    "type": "income",
+    "amount": "3550.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Tech employer"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 45,
+    "type": "income",
+    "amount": "3550.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Tech employer"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 59,
+    "type": "income",
+    "amount": "3550.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Tech employer"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 73,
+    "type": "income",
+    "amount": "3550.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Tech employer"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 2,
+    "type": "income",
+    "amount": "34.80",
+    "category": "Savings Interest",
+    "description": "High-yield savings account monthly interest payout"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 20,
+    "type": "income",
+    "amount": "42.50",
+    "category": "Refunds",
+    "description": "Target store merchandise return credit"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 7,
+    "type": "income",
+    "amount": "2500.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Austin ISD"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 21,
+    "type": "income",
+    "amount": "2500.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Austin ISD"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 35,
+    "type": "income",
+    "amount": "2500.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Austin ISD"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 49,
+    "type": "income",
+    "amount": "2500.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Austin ISD"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 63,
+    "type": "income",
+    "amount": "2500.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Austin ISD"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 77,
+    "type": "income",
+    "amount": "2500.00",
+    "category": "Salary",
+    "description": "Biweekly direct deposit payroll - Austin ISD"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 8,
+    "type": "income",
+    "amount": "475.00",
+    "category": "Freelance Work",
+    "description": "UX design consultation stipend - Austin tech collective"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 32,
+    "type": "income",
+    "amount": "26.15",
+    "category": "Savings Interest",
+    "description": "High-yield savings monthly interest deposit"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 51,
+    "type": "income",
+    "amount": "64.20",
+    "category": "Refunds",
+    "description": "REI gear return adjustment credit"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 14,
+    "type": "expense",
+    "amount": "2400.00",
+    "category": "Bills",
+    "description": "Monthly apartment lease payment - South Congress Lofts"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 44,
+    "type": "expense",
+    "amount": "2400.00",
+    "category": "Bills",
+    "description": "Monthly apartment lease payment - South Congress Lofts"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 74,
+    "type": "expense",
+    "amount": "2400.00",
+    "category": "Bills",
+    "description": "Monthly apartment lease payment - South Congress Lofts"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 0,
+    "type": "expense",
+    "amount": "124.60",
+    "category": "Grocery",
+    "description": "H-E-B grocery trip - fresh produce and pantry staples"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 1,
+    "type": "expense",
+    "amount": "18.40",
+    "category": "Food",
+    "description": "Torchy's Tacos lunch on South Congress"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 3,
+    "type": "expense",
+    "amount": "46.20",
+    "category": "Transport",
+    "description": "Shell gas station fuel fill-up on Lamar Blvd"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 4,
+    "type": "expense",
+    "amount": "85.00",
+    "category": "Bills",
+    "description": "Austin Energy residential electric utility bill"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 6,
+    "type": "expense",
+    "amount": "32.50",
+    "category": "Health",
+    "description": "Walgreens pharmacy prescription co-pay and vitamins"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 7,
+    "type": "expense",
+    "amount": "64.15",
+    "category": "Shopping",
+    "description": "Target South Austin household essentials"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 8,
+    "type": "expense",
+    "amount": "28.00",
+    "category": "Food",
+    "description": "Chipotle Mexican Grill family dinner takeout"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 10,
+    "type": "expense",
+    "amount": "70.00",
+    "category": "Bills",
+    "description": "Google Fiber high-speed residential internet bill"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 11,
+    "type": "expense",
+    "amount": "185.30",
+    "category": "Grocery",
+    "description": "Costco Wholesale household bulk goods and pantry supplies"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 13,
+    "type": "expense",
+    "amount": "15.00",
+    "category": "Transport",
+    "description": "City of Austin downtown parking meter fee"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 15,
+    "type": "expense",
+    "amount": "42.00",
+    "category": "Entertainment",
+    "description": "Alamo Drafthouse movie tickets for two"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 17,
+    "type": "expense",
+    "amount": "54.80",
+    "category": "Food",
+    "description": "Ramen Tatsu-Ya dinner on South Lamar"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 19,
+    "type": "expense",
+    "amount": "96.40",
+    "category": "Grocery",
+    "description": "H-E-B weekly groceries and household goods"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 22,
+    "type": "expense",
+    "amount": "38.50",
+    "category": "Transport",
+    "description": "Chevron gas refill on Ben White Blvd"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 24,
+    "type": "expense",
+    "amount": "45.00",
+    "category": "Gifts",
+    "description": "Paper Place Austin handmade birthday card and gift wrap"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 27,
+    "type": "expense",
+    "amount": "142.75",
+    "category": "Shopping",
+    "description": "REI Austin outdoor hiking shoes and trail socks"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 30,
+    "type": "expense",
+    "amount": "110.20",
+    "category": "Grocery",
+    "description": "Trader Joe's organic groceries and specialty snacks"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 34,
+    "type": "expense",
+    "amount": "88.50",
+    "category": "Bills",
+    "description": "Austin Energy electric and trash utility service"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 37,
+    "type": "expense",
+    "amount": "25.00",
+    "category": "Health",
+    "description": "Austin Regional Clinic physician visit copay"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 39,
+    "type": "expense",
+    "amount": "52.30",
+    "category": "Food",
+    "description": "Chuy's Tex-Mex dinner on Barton Springs"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 41,
+    "type": "expense",
+    "amount": "70.00",
+    "category": "Bills",
+    "description": "Google Fiber monthly home broadband service"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 43,
+    "type": "expense",
+    "amount": "135.60",
+    "category": "Grocery",
+    "description": "H-E-B grocery restocking and dairy"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 47,
+    "type": "expense",
+    "amount": "48.90",
+    "category": "Transport",
+    "description": "Shell fuel station unleaded gasoline fill-up"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 52,
+    "type": "expense",
+    "amount": "210.40",
+    "category": "Grocery",
+    "description": "Costco Wholesale warehouse groceries and paper goods"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 55,
+    "type": "expense",
+    "amount": "35.00",
+    "category": "Other",
+    "description": "USPS Austin postal shipping and package postage"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 58,
+    "type": "expense",
+    "amount": "65.00",
+    "category": "Bills",
+    "description": "City of Austin clean water and wastewater utility"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 60,
+    "type": "expense",
+    "amount": "18.75",
+    "category": "Food",
+    "description": "P. Terry's Burger Stand drive-thru meal"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 64,
+    "type": "expense",
+    "amount": "78.20",
+    "category": "Shopping",
+    "description": "The Home Depot garden tools and home repairs"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 67,
+    "type": "expense",
+    "amount": "118.90",
+    "category": "Grocery",
+    "description": "H-E-B weekly family grocery shopping"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 70,
+    "type": "expense",
+    "amount": "70.00",
+    "category": "Bills",
+    "description": "Google Fiber monthly fiber internet subscription"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 72,
+    "type": "expense",
+    "amount": "44.00",
+    "category": "Transport",
+    "description": "ExxonMobil gasoline refill on Riverside Dr"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 76,
+    "type": "expense",
+    "amount": "92.10",
+    "category": "Bills",
+    "description": "Austin Energy seasonal electricity utility bill"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 81,
+    "type": "expense",
+    "amount": "145.30",
+    "category": "Grocery",
+    "description": "Trader Joe's groceries and household items"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 84,
+    "type": "expense",
+    "amount": "36.20",
+    "category": "Food",
+    "description": "Kerbey Lane Cafe weekend breakfast on South Lamar"
+  },
+  {
+    "actor": "owner",
+    "daysAgo": 87,
+    "type": "expense",
+    "amount": "50.00",
+    "category": "Other",
+    "description": "Austin Pets Alive animal shelter community donation"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 0,
+    "type": "expense",
+    "amount": "42.80",
+    "category": "Food",
+    "description": "Central Market cafe lunch and bakery pastries"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 2,
+    "type": "expense",
+    "amount": "84.50",
+    "category": "Grocery",
+    "description": "Trader Joe's organic pantry goods and snacks"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 4,
+    "type": "expense",
+    "amount": "22.00",
+    "category": "Health",
+    "description": "CVS Pharmacy personal care and first aid supplies"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 5,
+    "type": "expense",
+    "amount": "38.60",
+    "category": "Transport",
+    "description": "CapMetro monthly transit commuter pass"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 6,
+    "type": "expense",
+    "amount": "68.40",
+    "category": "Shopping",
+    "description": "Target South Lamar clothing and home organization"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 8,
+    "type": "expense",
+    "amount": "15.75",
+    "category": "Food",
+    "description": "Caffe Medici artisan coffee and breakfast pastry"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 10,
+    "type": "expense",
+    "amount": "145.20",
+    "category": "Grocery",
+    "description": "H-E-B family groceries and fresh ingredients"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 12,
+    "type": "expense",
+    "amount": "55.00",
+    "category": "Education",
+    "description": "Austin Community College continuing education materials"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 13,
+    "type": "expense",
+    "amount": "34.50",
+    "category": "Food",
+    "description": "Tacodeli breakfast tacos for morning team"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 15,
+    "type": "expense",
+    "amount": "72.00",
+    "category": "Entertainment",
+    "description": "Paramount Theatre Austin historic film screening"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 16,
+    "type": "expense",
+    "amount": "91.30",
+    "category": "Grocery",
+    "description": "Whole Foods Market Lamar specialty groceries"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 19,
+    "type": "expense",
+    "amount": "41.50",
+    "category": "Transport",
+    "description": "Shell gas station fuel pump on Oltorf St"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 23,
+    "type": "expense",
+    "amount": "28.50",
+    "category": "Health",
+    "description": "Walgreens prescription refill and wellness items"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 26,
+    "type": "expense",
+    "amount": "62.00",
+    "category": "Gifts",
+    "description": "Waterloo Records vinyl record birthday gift"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 28,
+    "type": "expense",
+    "amount": "115.80",
+    "category": "Grocery",
+    "description": "H-E-B pantry replenishment and produce"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 29,
+    "type": "expense",
+    "amount": "18.25",
+    "category": "Food",
+    "description": "Bouldin Creek Cafe vegetarian brunch"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 33,
+    "type": "expense",
+    "amount": "45.00",
+    "category": "Education",
+    "description": "BookPeople Austin literature and reference books"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 35,
+    "type": "expense",
+    "amount": "82.40",
+    "category": "Shopping",
+    "description": "Barton Creek Square apparel and shoes"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 38,
+    "type": "expense",
+    "amount": "39.10",
+    "category": "Transport",
+    "description": "Chevron station fuel fill-up on Manchaca Rd"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 40,
+    "type": "expense",
+    "amount": "130.50",
+    "category": "Grocery",
+    "description": "Trader Joe's pantry supplies and fresh fruit"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 42,
+    "type": "expense",
+    "amount": "31.00",
+    "category": "Food",
+    "description": "Torchy's Tacos casual family dinner"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 46,
+    "type": "expense",
+    "amount": "60.00",
+    "category": "Entertainment",
+    "description": "Austin City Limits Live concert admission ticket"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 50,
+    "type": "expense",
+    "amount": "24.50",
+    "category": "Health",
+    "description": "CVS Pharmacy seasonal allergy medication and drops"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 53,
+    "type": "expense",
+    "amount": "98.70",
+    "category": "Grocery",
+    "description": "H-E-B weekly groceries and pantry staples"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 56,
+    "type": "expense",
+    "amount": "43.20",
+    "category": "Transport",
+    "description": "Texaco gas station fuel purchase"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 61,
+    "type": "expense",
+    "amount": "75.00",
+    "category": "Shopping",
+    "description": "Target South Austin bedding and home decor"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 65,
+    "type": "expense",
+    "amount": "122.40",
+    "category": "Grocery",
+    "description": "Central Market Westgate artisanal groceries"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 68,
+    "type": "expense",
+    "amount": "35.00",
+    "category": "Education",
+    "description": "Austin Public Library lost book replacement fee"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 71,
+    "type": "expense",
+    "amount": "58.00",
+    "category": "Gifts",
+    "description": "Atown boutique local handcrafted holiday gifts"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 75,
+    "type": "expense",
+    "amount": "108.60",
+    "category": "Grocery",
+    "description": "H-E-B family groceries and cleaning supplies"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 78,
+    "type": "expense",
+    "amount": "26.40",
+    "category": "Food",
+    "description": "Via 313 Detroit-style pizza slice dinner"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 82,
+    "type": "expense",
+    "amount": "40.00",
+    "category": "Transport",
+    "description": "Shell gas station regular fuel fill-up"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 85,
+    "type": "expense",
+    "amount": "32.00",
+    "category": "Entertainment",
+    "description": "Barton Springs Pool season passes and entry"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 88,
+    "type": "expense",
+    "amount": "94.50",
+    "category": "Grocery",
+    "description": "H-E-B South Congress weekly staples and dairy"
+  },
+  {
+    "actor": "partner",
+    "daysAgo": 89,
+    "type": "expense",
+    "amount": "21.50",
+    "category": "Food",
+    "description": "JuiceLand fresh cold-pressed smoothies"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 1,
+    "type": "expense",
+    "amount": "6.50",
+    "category": "Food",
+    "description": "Chipotle kids meal and fountain drink"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 5,
+    "type": "expense",
+    "amount": "14.25",
+    "category": "Entertainment",
+    "description": "Alamo Drafthouse Mueller weekend cinema ticket"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 9,
+    "type": "expense",
+    "amount": "8.75",
+    "category": "Food",
+    "description": "Boba tea and snack at Sharetea Austin"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 12,
+    "type": "expense",
+    "amount": "18.50",
+    "category": "Education",
+    "description": "BookPeople Austin reading club paperback books"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 18,
+    "type": "expense",
+    "amount": "4.25",
+    "category": "Food",
+    "description": "P. Terry's burger stand after-school milkshake"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 25,
+    "type": "expense",
+    "amount": "12.00",
+    "category": "Shopping",
+    "description": "Target Mueller school sketchbook and colored pencils"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 36,
+    "type": "expense",
+    "amount": "2.50",
+    "category": "Transport",
+    "description": "CapMetro youth single ride bus fare"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 48,
+    "type": "expense",
+    "amount": "16.00",
+    "category": "Entertainment",
+    "description": "Zilker Park botanical garden youth admission"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 62,
+    "type": "expense",
+    "amount": "22.50",
+    "category": "Shopping",
+    "description": "Barnes & Noble middle school workbook"
+  },
+  {
+    "actor": "child",
+    "daysAgo": 79,
+    "type": "expense",
+    "amount": "5.50",
+    "category": "Food",
+    "description": "Amy's Ice Creams South Congress scoop"
+  }
+]

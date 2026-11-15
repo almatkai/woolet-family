@@ -51,6 +51,11 @@ export default defineConfig(({ mode }) => {
         server: {
             port: port,
             proxy: {
+                '/api/demo': {
+                    target: `http://localhost:${apiPort}`,
+                    rewrite: url => url.replace(/^\/api/, ''),
+                    changeOrigin: false,
+                },
                 '/trpc': {
                     target: `http://localhost:${apiPort}`,
                     changeOrigin: true,

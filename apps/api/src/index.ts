@@ -21,6 +21,8 @@ import { eq } from 'drizzle-orm';
 import { chatWithCapabilitiesStream } from './services/ai/chat-service';
 import { persistChatAttachments } from './services/ai/attachment-storage-service';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createDemoRoutes } from './routes/demo';
+import { DEMO_RESTRICTED_MESSAGE, getDemoRole } from './lib/demo';
 
 // Test
 
@@ -60,6 +62,7 @@ app.use('/trpc/*', rateLimitMiddleware);
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.route('/demo', createDemoRoutes());
 
 // Mint a short-lived Paddle Customer Portal URL for the authenticated user.
 // The customer ID comes from our database, never from the browser request.
@@ -67,6 +70,7 @@ app.post('/billing/paddle/portal', async (c) => {
     const auth = getAuth(c);
     const userId = auth?.userId;
     if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+    if (getDemoRole(userId)) return c.json({ error: DEMO_RESTRICTED_MESSAGE }, 403);
 
     const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
     if (!user?.paddleCustomerId) {

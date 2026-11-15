@@ -19,6 +19,25 @@ Woolet is a sophisticated personal finance and investment tracking application b
 
 ## 🛠️ Tech Stack
 
+### Hackathon demo
+
+`/demo` opens a prefilled Martinez family without registration. The login page also offers Alex (owner), Jordan (partner), and Maya (child). The banner switches actors, exits the demo, and optionally filters navigation to Family focus. All features remains available for exploring the wider Woolet product.
+
+The three accounts are shared by visitors: edits persist and each account has **50 lifetime Woo chat questions shared across all visitors**. Reopening the demo does not reset the quota. Personal identity, billing, invitations, imports and cross-user payments are unavailable; debt/split, subscription, tax and investment records are provided for viewing. Never enter personal information in these shared accounts. Portfolio prices are illustrative sample data.
+
+After applying the app's database migrations (including `0020_shared_purchase_approval`), provision the synthetic users and data:
+
+```bash
+cd apps/api
+bun scripts/seed-demo.ts --apply
+```
+
+The API build also emits `dist/seed-demo.js` for use inside the production image, where source-only scripts are unavailable.
+
+The script uses the existing server-side Clerk and database credentials, creates only `@demo.woolet.cc` identities, and prints their three non-secret user IDs. It is transactional and idempotent for database data: repeat runs preserve existing demo edits and AI usage. It also adds Jordan's $1,200 washing-machine proposal if the demo family has no purchase proposals yet. Set `DEMO_ENABLED=true` and the printed `DEMO_OWNER_USER_ID`, `DEMO_PARTNER_USER_ID`, `DEMO_CHILD_USER_ID` in the API environment. Keep these IDs configured when disabling new demo sign-ins so existing demo sessions retain their restrictions. `WEB_URL` must identify the public application origin. No new port or Docker network is required.
+
+The demo reuses Woolet's existing accounts, family wallets, child limits, splits, debts, receipt drafts and AI assistant. New work adds guest access and a shared-purchase approval agreement: purchases strictly above the configured limit (1,000 by default, in the wallet's currency) become proposals. Another adult can approve, counter with a different amount, or decline. Approval records the expense exactly once after checking the current wallet balance; pending purchases do not reserve money. Personal-account transactions and child-wallet limits retain their existing behavior. Goal consequence previews and weekly check-in cards are not part of this implementation.
+
 ### Frontend (`apps/web`)
 -   **Framework**: [React](https://reactjs.org/) with [Vite](https://vitejs.dev/)
 -   **Routing**: [TanStack Router](https://tanstack.com/router/latest)

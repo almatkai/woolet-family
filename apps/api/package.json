@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "NODE_ENV=development bun run --watch src/index.ts",
-        "build": "bun build src/index.ts --outdir dist --target bun",
+        "build": "bun build src/index.ts --outdir dist --target bun && bun build scripts/seed-demo.ts --outfile dist/seed-demo.js --target bun --external postgres --external @clerk/backend",
         "start": "bun run dist/index.js",
         "vapid-gen": "web-push generate-vapid-keys",
         "test": "bun test --preload ./test/setup.ts",

@@ -1,4 +1,6 @@
 import { FamilyPage } from './routes/family';
+import { DemoPage } from './routes/demo';
+import { DemoBar } from './components/DemoBar';
 import { FamilyJoinPage } from './routes/family/join';
 import { FamilyWalletPage } from './routes/family/wallet';
 import { createRootRoute, createRoute, Outlet, useLocation, Navigate, redirect } from '@tanstack/react-router';
@@ -85,7 +87,8 @@ function RootLayout() {
     const isSettingsRoute = location.pathname.startsWith('/settings');
     const isAuthRoute = location.pathname.startsWith('/login')
         || location.pathname.startsWith('/register')
-        || location.pathname.startsWith('/sso-callback');
+        || location.pathname.startsWith('/sso-callback')
+        || location.pathname === '/demo';
     const isAdminRoute = location.pathname.startsWith('/admin');
     const isPublicRoute = isAuthRoute;
 
@@ -168,6 +171,7 @@ function RootLayout() {
                             !isAuthRoute && (location.pathname === "/woo" ? "max-[470px]:pb-[5.25rem]" : "max-[470px]:pb-[calc(6rem+env(safe-area-inset-bottom))]")
                         )}
                     >
+                        {!isAuthRoute && <DemoBar />}
                         <Outlet />
                     </main>
                 </SidebarInset>
@@ -390,6 +394,7 @@ export const familyWalletRoute = createRoute({
     component: FamilyWalletPage,
 });
 export const routeTree = rootRoute.addChildren([
+    createRoute({ getParentRoute: () => rootRoute, path: '/demo', component: DemoPage }),
     familyRoute,
     familyJoinRoute,
     familyWalletRoute,
