@@ -2,10 +2,10 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { protectedProcedure } from '../lib/trpc';
-import { householdMembers, users, transactions, subscriptions, credits, mortgages, deposits } from '../db/schema';
+import { householdMembers, users, transactions } from '../db/schema';
 import { canViewMemberFinances } from '../lib/household/policy';
 import { baseConverter, dashboardMembership, householdBaseCurrency, moneyAmount } from '../lib/household/dashboard';
-import { ownedActiveDebts, readBankHierarchy } from '../lib/household/finance-reads';
+import { readMemberProducts, readBankHierarchy } from '../lib/household/finance-reads';
 import { nextSubscriptionDate } from '../lib/household/subscription-date';
 import { fromCents, periodBounds, toCents } from '../lib/household/limits';
 import { currencyExchangeService } from '../services/currency-exchange-service';
@@ -41,13 +41,7 @@ export const householdMemberFinanceProcedures = {
         const items = page.slice(0, 50);
         const last = items.at(-1);
         const nextCursor = page.length > 50 && last ? Buffer.from(JSON.stringify({ id: last.id, date: last.date, createdAt: last.cursorCreatedAt })).toString('base64url') : null;
-        const [activeSubscriptions, debtRows, creditRows, mortgageRows, depositRows] = await Promise.all([
-            ctx.db.query.subscriptions.findMany({ where: and(eq(subscriptions.userId, target.userId), eq(subscriptions.status, 'active')) }),
-            ctx.db.query.debts.findMany({ where: ownedActiveDebts(target.userId, false), with: { currencyBalance: true } }),
-            accountIds.length ? ctx.db.query.credits.findMany({ where: inArray(credits.accountId, accountIds) }) : [],
-            accountIds.length ? ctx.db.query.mortgages.findMany({ where: inArray(mortgages.accountId, accountIds) }) : [],
-            accountIds.length ? ctx.db.query.deposits.findMany({ where: inArray(deposits.accountId, accountIds) }) : [],
-        ]);
+        const { activeSubscriptions, debtRows, creditRows, mortgageRows, depositRows } = await readMemberProducts(ctx.db, target.userId, accountIds);
         const debtTotals = new Map<string, { iOwe: number; theyOwe: number }>();
         for (const debt of debtRows) {
             const currencyCode = debt.currencyBalance?.currencyCode ?? debt.currencyCode ?? 'USD';

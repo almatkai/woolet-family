@@ -12,6 +12,7 @@ import { householdWalletProcedures } from './household-wallets';
 import { householdMemberFinanceProcedures } from './household-member-finances';
 import { householdOverviewProcedures } from './household-overview';
 import { householdBudgetProcedures } from './household-budgets';
+import { householdFamilyFinanceProcedures } from './household-family-finances';
 import { householdFamilyTransactionProcedures } from './household-family-transactions';
 import { householdWalletQueries } from './household-wallet-queries';
 
@@ -47,6 +48,7 @@ async function invitationState(db: DB, userId: string, token: string) {
 export const householdRouter = router({
     ...householdMemberFinanceProcedures,
     ...householdFamilyTransactionProcedures,
+    ...householdFamilyFinanceProcedures,
     ...householdOverviewProcedures,
     ...householdBudgetProcedures,
     ...householdWalletProcedures,
