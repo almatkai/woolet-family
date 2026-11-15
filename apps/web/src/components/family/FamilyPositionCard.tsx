@@ -41,7 +41,7 @@ export function FamilyPositionCard({
                                     ≈{' '}
                                     <FamilyMoney
                                         amount={amount}
-                                        currency={currency}
+                                        currency={label === 'Net worth' || label === 'Owes' || label === 'Monthly payments' ? finances.displayCurrency : currency}
                                         abbreviate
                                     />
                                 </>

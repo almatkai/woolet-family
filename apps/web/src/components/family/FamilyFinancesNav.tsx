@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/ui/glass';
 import { Skeleton } from '@/components/ui/skeleton';
-import { rowClass, sectionLabel } from './shared';
+import { FamilyMoney, rowClass, sectionLabel } from './shared';
 import type {
     FamilyFinancesOutput,
     FamilyTaxRow,
@@ -64,6 +64,9 @@ export function FamilyFinancesNav({
     month: string;
     search: { currency?: string };
 }) {
+    const financeMoney = (amount: string | number) => finances ? (
+        <FamilyMoney amount={amount} currency={finances.displayCurrency} />
+    ) : '—';
     return (
         <section className="space-y-3">
             <h2 className={sectionLabel}>Family finances</h2>
@@ -90,7 +93,7 @@ export function FamilyFinancesNav({
                                     <>
                                         {finances.summary.accountsCount}{' '}
                                         accounts, ≈{' '}
-                                        {money(
+                                        {financeMoney(
                                             finances.summary.balancesConverted,
                                         )}
                                     </>
@@ -113,7 +116,7 @@ export function FamilyFinancesNav({
                                 finances && (
                                     <>
                                         Family owes ≈{' '}
-                                        {money(finances.summary.owesConverted)}
+                                        {financeMoney(finances.summary.owesConverted)}
                                     </>
                                 ),
                             ],
@@ -164,7 +167,7 @@ export function FamilyFinancesNav({
                                     ) : (
                                         <>
                                             ≈{' '}
-                                            {money(
+                                            {financeMoney(
                                                 finances.summary
                                                     .investmentsValueConverted,
                                             )}
