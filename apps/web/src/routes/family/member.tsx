@@ -1,11 +1,12 @@
-import { ChevronLeft } from 'lucide-react';
 import {
     Link,
     useParams,
     useSearch,
     useNavigate,
 } from '@tanstack/react-router';
+import { ChevronLeft } from 'lucide-react';
 import { ActionButton } from '@/components/ui/action-button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatDay } from '@/components/family/formatDay';
 import { trpc } from '@/lib/trpc';
 import { PageHeader } from '@/components/PageHeader';
@@ -31,6 +32,29 @@ import {
     type FamilyWalletsResponse,
     currentTaxYear,
 } from '@/components/family/types';
+
+function MemberBlockState({
+    error,
+    retry,
+}: {
+    error: boolean;
+    retry: () => void;
+}) {
+    return error ? (
+        <div role="alert" className="text-sm">
+            Couldn't load this section.{' '}
+            <Button variant="ghost" size="sm" onClick={retry}>
+                Try again
+            </Button>
+        </div>
+    ) : (
+        <div className="space-y-2" aria-label="Loading">
+            {[0, 1, 2].map((row) => (
+                <Skeleton key={row} className="h-12" />
+            ))}
+        </div>
+    );
+}
 
 export function FamilyMemberPage() {
     const { memberId } = useParams({ strict: false }) as { memberId: string };
@@ -60,7 +84,9 @@ export function FamilyMemberPage() {
                 last.nextCursor ?? undefined,
         },
     );
-    const tax = trpc.household.familyTax.useQuery({ taxYear: currentTaxYear() });
+    const tax = trpc.household.familyTax.useQuery({
+        taxYear: currentTaxYear(),
+    });
     const wallets = trpc.household.wallets.useQuery({ today: localToday() });
     const data = overview.data as HouseholdOverviewOutput | undefined;
     const holdings = finances.data as FamilyFinancesOutput | undefined;
@@ -97,9 +123,13 @@ export function FamilyMemberPage() {
     );
     const unavailable =
         [overview.error, finances.error, transactions.error].some(
-            (error) => error?.data?.code === 'NOT_FOUND' || error?.data?.code === 'FORBIDDEN',
+            (error) =>
+                error?.data?.code === 'NOT_FOUND' ||
+                error?.data?.code === 'FORBIDDEN',
         ) ||
-        (summaryMember && family.data?.me && !canOpenMember(family.data.me, summaryMember));
+        (summaryMember &&
+            family.data?.me &&
+            !canOpenMember(family.data.me, summaryMember));
     if (unavailable)
         return (
             <GlassCard className="p-4 space-y-3">
@@ -107,14 +137,19 @@ export function FamilyMemberPage() {
                 {back}
             </GlassCard>
         );
-    if (!member && family.isLoading)
-        return <FamilySectionState error={false} retry={() => {}} />;
     if (!member)
         return (
-            <GlassCard className="p-4">
-                <p>This member isn't available.</p>
-                {back}
-            </GlassCard>
+            <FamilySectionState
+                error={
+                    !!family.error ||
+                    !!overview.error ||
+                    (!family.isLoading && !overview.isLoading)
+                }
+                retry={() => {
+                    void family.refetch();
+                    void overview.refetch();
+                }}
+            />
         );
     const own = holdings?.members[0];
     const currency = data?.displayCurrency ?? search.currency ?? 'KZT';
@@ -163,7 +198,7 @@ export function FamilyMemberPage() {
               {
                   title: 'Deposits',
                   rows: own.deposits.map((item) => ({
-                      name: `${item.name}, rate ${item.interestRate ?? 'not set'}%`,
+                      name: `${item.name}, rate ${item.interestRate ?? 'not set'}${item.interestRate === null ? '' : '%'}`,
                       totals: [
                           { currency: item.currency, amount: item.balance },
                       ],
@@ -248,68 +283,134 @@ export function FamilyMemberPage() {
                     });
                 }}
             />
-            {[overview, finances, transactions].map(
-                (query, index) =>
-                    (query.error || query.isLoading) && (
-                        <FamilySectionState
-                            key={index}
-                            error={!!query.error}
-                            retry={() => void query.refetch()}
-                        />
-                    ),
-            )}
             <GlassCard className="p-4">
                 <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3">
                     {[
-                        ['Net worth', member.netWorth],
-                        ['Spent in ' + monthName, member.spent],
-                        ['Owes', holdings?.summary.owesConverted],
-                        [
-                            'Monthly payments',
-                            holdings?.summary.monthlyPaymentsConverted,
-                        ],
-                    ].map(([label, amount]) => (
-                        <div key={label}>
-                            <dt className="text-xs text-muted-foreground">
-                                {label}
-                            </dt>
-                            <dd className="text-base font-semibold tabular-nums">
-                                {amount == null ? (
-                                    '—'
-                                ) : (
-                                    <>
-                                        ≈{' '}
-                                        <FamilyMoney
-                                            amount={amount}
-                                            currency={currency}
-                                        />
-                                    </>
-                                )}
-                            </dd>
-                        </div>
-                    ))}
+                        {
+                            label: 'Net worth',
+                            amount: summaryMember?.netWorth,
+                            query: overview,
+                            currency: data?.displayCurrency,
+                        },
+                        {
+                            label: 'Spent in ' + monthName,
+                            amount: summaryMember?.spent,
+                            query: overview,
+                            currency: data?.displayCurrency,
+                        },
+                        {
+                            label: 'Owes',
+                            amount: holdings?.summary.owesConverted,
+                            query: finances,
+                            currency: holdings?.displayCurrency,
+                        },
+                        {
+                            label: 'Monthly payments',
+                            amount: holdings?.summary.monthlyPaymentsConverted,
+                            query: finances,
+                            currency: holdings?.displayCurrency,
+                        },
+                    ].map(
+                        ({
+                            label,
+                            amount,
+                            query,
+                            currency: amountCurrency,
+                        }) => (
+                            <div key={label}>
+                                <dt className="text-xs text-muted-foreground">
+                                    {label}
+                                </dt>
+                                <dd className="text-base font-semibold tabular-nums">
+                                    {query.error ? (
+                                        <span
+                                            className="text-xs font-normal"
+                                            role="alert"
+                                        >
+                                            Couldn't load.{' '}
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                    void query.refetch()
+                                                }
+                                            >
+                                                Try again
+                                            </Button>
+                                        </span>
+                                    ) : query.isLoading ? (
+                                        <Skeleton className="h-5 w-24" />
+                                    ) : amount == null || !amountCurrency ? (
+                                        '—'
+                                    ) : (
+                                        <>
+                                            ≈{' '}
+                                            <FamilyMoney
+                                                amount={amount}
+                                                currency={amountCurrency}
+                                            />
+                                        </>
+                                    )}
+                                </dd>
+                            </div>
+                        ),
+                    )}
                 </dl>
             </GlassCard>
             <h2 className="text-sm font-semibold">Spending in {monthName}</h2>
             <div className="grid gap-4 lg:grid-cols-2">
                 <GlassCard className="p-3">
-                    {block?.categories.map((category) => (
-                        <div
-                            key={category.categoryId ?? 'none'}
-                            className="flex justify-between gap-3 py-3 text-sm"
-                        >
-                            <span>{category.categoryName}</span>
-                            <MoneyTotals
-                                totals={category.totals.map((total) => ({
-                                    currency: total.currencyCode,
-                                    amount: total.amount,
-                                }))}
-                            />
-                        </div>
-                    ))}
+                    {overview.error ? (
+                        <MemberBlockState
+                            error
+                            retry={() => void overview.refetch()}
+                        />
+                    ) : overview.isLoading ? (
+                        <MemberBlockState
+                            error={false}
+                            retry={() => void overview.refetch()}
+                        />
+                    ) : (
+                        block?.categories.map((category) => (
+                            <div
+                                key={category.categoryId ?? 'none'}
+                                className="flex justify-between gap-3 py-3 text-sm"
+                            >
+                                <span>{category.categoryName}</span>
+                                <MoneyTotals
+                                    totals={category.totals.map((total) => ({
+                                        currency: total.currencyCode,
+                                        amount: total.amount,
+                                    }))}
+                                />
+                            </div>
+                        ))
+                    )}
                 </GlassCard>
                 <GlassCard className="p-2 sm:p-3">
-                    <FamilyLedgerRows items={ledger?.items ?? []} />
+                    {transactions.error && !ledger ? (
+                        <MemberBlockState
+                            error
+                            retry={() => void transactions.refetch()}
+                        />
+                    ) : !ledger ? (
+                        <MemberBlockState
+                            error={false}
+                            retry={() => void transactions.refetch()}
+                        />
+                    ) : (
+                        <FamilyLedgerRows items={ledger.items} />
+                    )}
+                    {transactions.error && ledger && (
+                        <MemberBlockState
+                            error
+                            retry={() =>
+                                void (transactions.isFetchNextPageError
+                                    ? transactions.fetchNextPage()
+                                    : transactions.refetch())
+                            }
+                        />
+                    )}
                     {ledger && !ledger.items.length && (
                         <p className="p-3 text-sm text-muted-foreground">
                             No spending in {monthName} yet.
@@ -326,6 +427,14 @@ export function FamilyMemberPage() {
                     )}
                 </GlassCard>
             </div>
+            {(!holdings || finances.error) && (
+                <GlassCard className="p-3">
+                    <MemberBlockState
+                        error={!!finances.error}
+                        retry={() => void finances.refetch()}
+                    />
+                </GlassCard>
+            )}
             {sections
                 .filter(
                     (section) =>
@@ -344,7 +453,17 @@ export function FamilyMemberPage() {
                                         key={index}
                                         className="flex justify-between gap-3 p-3 text-sm"
                                     >
-                                        <span>{row.name}</span>
+                                        <div>
+                                            <p>{row.name}</p>
+                                            {'detail' in row &&
+                                                typeof row.detail ===
+                                                    'string' &&
+                                                row.detail && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {row.detail}
+                                                    </p>
+                                                )}
+                                        </div>
                                         <MoneyTotals totals={row.totals} />
                                     </div>
                                 ))}
@@ -354,12 +473,14 @@ export function FamilyMemberPage() {
                 ))}
             {child && wallet && (
                 <GlassCard className="p-3">
-                    <Button asChild variant="ghost" size="sm"><Link
-                        to="/family/wallets/$walletId"
-                        params={{ walletId: wallet.id }}
-                    >
-                        Wallet: {wallet.name}
-                    </Link></Button>
+                    <Button asChild variant="ghost" size="sm">
+                        <Link
+                            to="/family/wallets/$walletId"
+                            params={{ walletId: wallet.id }}
+                        >
+                            Wallet: {wallet.name}
+                        </Link>
+                    </Button>
                     {wallet.limitSummary && (
                         <LimitBar
                             spent={Number(wallet.limitSummary.spent)}
@@ -415,11 +536,13 @@ export function FamilyMemberPage() {
                     </GlassCard>
                 </section>
             )}
-            {!sections.some((section) => section.rows.length) && (
-                <p className="text-sm text-muted-foreground">
-                    {member.name} hasn't added any accounts yet.
-                </p>
-            )}
+            {holdings &&
+                !finances.error &&
+                !sections.some((section) => section.rows.length) && (
+                    <p className="text-sm text-muted-foreground">
+                        {member.name} hasn't added any accounts yet.
+                    </p>
+                )}
         </div>
     );
 }
