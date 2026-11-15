@@ -1,0 +1,245 @@
+import type { ReactNode } from 'react';
+import { Link } from '@tanstack/react-router';
+import {
+    ChevronRight,
+    Wallet,
+    Receipt,
+    HandCoins,
+    Landmark,
+    House,
+    PiggyBank,
+    Repeat,
+    TrendingUp,
+    FileText,
+    Users,
+    type LucideIcon,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { GlassCard } from '@/components/ui/glass';
+import { Skeleton } from '@/components/ui/skeleton';
+import { rowClass, sectionLabel } from './shared';
+import type {
+    FamilyFinancesOutput,
+    FamilyTaxRow,
+    HouseholdOverview,
+    HouseholdOverviewOutput,
+} from './types';
+
+type FinancePath =
+    | '/accounts'
+    | '/spending'
+    | '/debts'
+    | '/financial/credits'
+    | '/financial/mortgages'
+    | '/financial/deposits'
+    | '/subscriptions'
+    | '/investing'
+    | '/tax'
+    | '/family';
+
+export function FamilyFinancesNav({
+    financesQuery,
+    finances,
+    overview,
+    spent,
+    monthName,
+    money,
+    taxes,
+    today,
+    wallets,
+    family,
+    month,
+    search,
+}: {
+    financesQuery: { error: unknown; refetch: () => unknown };
+    finances: FamilyFinancesOutput | undefined;
+    overview: HouseholdOverviewOutput | undefined;
+    spent: number;
+    monthName: string;
+    money: (amount: string | number) => ReactNode;
+    taxes: { error: unknown; data?: FamilyTaxRow[] };
+    today: string;
+    wallets: { error: unknown; data?: { wallets: unknown[] } };
+    family: NonNullable<HouseholdOverview>;
+    month: string;
+    search: { currency?: string };
+}) {
+    return (
+        <section className="space-y-3">
+            <h2 className={sectionLabel}>Family finances</h2>
+            {!!financesQuery.error && (
+                <p className="text-sm">
+                    Couldn't load the figures.{' '}
+                    <Button
+                        variant="ghost"
+                        onClick={() => void financesQuery.refetch()}
+                    >
+                        Try again
+                    </Button>
+                </p>
+            )}
+            <GlassCard className="p-2 sm:p-3">
+                <div className="grid lg:grid-cols-2 divide-y divide-border dark:divide-white/[0.06]">
+                    {(
+                        [
+                            [
+                                '/accounts',
+                                'Accounts',
+                                Wallet,
+                                finances && (
+                                    <>
+                                        {finances.summary.accountsCount}{' '}
+                                        accounts, ≈{' '}
+                                        {money(
+                                            finances.summary.balancesConverted,
+                                        )}
+                                    </>
+                                ),
+                            ],
+                            [
+                                '/spending',
+                                'Spending',
+                                Receipt,
+                                overview && (
+                                    <>
+                                        {money(spent)} in {monthName}
+                                    </>
+                                ),
+                            ],
+                            [
+                                '/debts',
+                                'Debts',
+                                HandCoins,
+                                finances && (
+                                    <>
+                                        Family owes ≈{' '}
+                                        {money(finances.summary.owesConverted)}
+                                    </>
+                                ),
+                            ],
+                            [
+                                '/financial/credits',
+                                'Credits',
+                                Landmark,
+                                finances &&
+                                    (finances.summary.creditsCount
+                                        ? `${finances.summary.creditsCount} active`
+                                        : 'No credits'),
+                            ],
+                            [
+                                '/financial/mortgages',
+                                'Mortgages',
+                                House,
+                                finances &&
+                                    (finances.summary.mortgagesCount
+                                        ? `${finances.summary.mortgagesCount} active`
+                                        : 'No mortgages'),
+                            ],
+                            [
+                                '/financial/deposits',
+                                'Deposits',
+                                PiggyBank,
+                                finances &&
+                                    (finances.summary.depositsCount
+                                        ? `${finances.summary.depositsCount} deposits`
+                                        : 'No deposits'),
+                            ],
+                            [
+                                '/subscriptions',
+                                'Subscriptions',
+                                Repeat,
+                                finances &&
+                                    (finances.summary.subscriptionsCount
+                                        ? `${finances.summary.subscriptionsCount} active`
+                                        : 'No subscriptions'),
+                            ],
+                            [
+                                '/investing',
+                                'Investing',
+                                TrendingUp,
+                                finances &&
+                                    (finances.summary
+                                        .investmentsValueConverted === null ? (
+                                        'Portfolio value unavailable'
+                                    ) : (
+                                        <>
+                                            ≈{' '}
+                                            {money(
+                                                finances.summary
+                                                    .investmentsValueConverted,
+                                            )}
+                                        </>
+                                    )),
+                            ],
+                            [
+                                '/tax',
+                                'Taxes',
+                                FileText,
+                                taxes.error ? (
+                                    'Tax figures unavailable'
+                                ) : taxes.data ? (
+                                    taxes.data.some(
+                                        (t: FamilyTaxRow) => t.hasProfile,
+                                    ) ? (
+                                        `${taxes.data.filter((t: FamilyTaxRow) => t.hasProfile).length} profiles for ${today.slice(0, 4)}`
+                                    ) : (
+                                        'No tax profiles yet'
+                                    )
+                                ) : (
+                                    <Skeleton
+                                        className="h-4 w-28"
+                                        aria-label="Loading tax profiles"
+                                    />
+                                ),
+                            ],
+                            [
+                                '/family',
+                                'Wallets and members',
+                                Users,
+                                wallets.data ? (
+                                    `${wallets.data.wallets.length} wallets, ${family.members.length} members`
+                                ) : wallets.error ? (
+                                    `Wallet count unavailable, ${family.members.length} members`
+                                ) : (
+                                    <Skeleton
+                                        className="h-4 w-28"
+                                        aria-label="Loading wallets"
+                                    />
+                                ),
+                            ],
+                        ] satisfies [
+                            FinancePath,
+                            string,
+                            LucideIcon,
+                            ReactNode,
+                        ][]
+                    ).map(([to, label, Icon, figure]) => {
+                        return (
+                            <Link
+                                key={String(to)}
+                                to={to}
+                                search={{
+                                    month,
+                                    currency: search.currency,
+                                    view: undefined,
+                                }}
+                                className={rowClass}
+                            >
+                                <Icon className="size-4 text-muted-foreground shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold">
+                                        {String(label)}
+                                    </p>
+                                    <div className="pointer-events-none text-xs text-muted-foreground truncate">
+                                        {figure}
+                                    </div>
+                                </div>
+                                <ChevronRight className="size-4 text-muted-foreground" />
+                            </Link>
+                        );
+                    })}
+                </div>
+            </GlassCard>
+        </section>
+    );
+}
