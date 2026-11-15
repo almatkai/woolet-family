@@ -1,3 +1,4 @@
+import { formatDay } from './formatDay';
 import { FamilyMemberLink } from './FamilyMemberLink';
 import { trpc } from '@/lib/trpc';
 import {
@@ -28,12 +29,14 @@ export function FamilyDebts({
             ) : (
                 <>
                     <FamilySectionTotal
+                        unconvertedCurrencies={data.unconvertedCurrencies}
                         label="Family owes"
                         totals={data.summary.owes}
                         converted={data.summary.owesConverted}
                         currency={data.displayCurrency}
                     />
                     <FamilySectionTotal
+                        unconvertedCurrencies={data.unconvertedCurrencies}
                         label="Owed to family"
                         totals={data.summary.owed}
                         converted={data.summary.owedConverted}
@@ -67,7 +70,7 @@ export function FamilyDebts({
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
                                                     {debt.dueDate
-                                                        ? `Due ${debt.dueDate}`
+                                                        ? `Due ${formatDay(debt.dueDate)}`
                                                         : 'No due date'}
                                                 </p>
                                             </div>

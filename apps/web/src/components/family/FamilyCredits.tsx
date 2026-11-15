@@ -1,3 +1,4 @@
+import { formatDay } from './formatDay';
 import { familyPermissions } from './permissions';
 import { trpc } from '@/lib/trpc';
 import { FamilySection, FamilySectionState } from './FamilySectionShared';
@@ -65,7 +66,9 @@ export function FamilyCredits({
                     </FamilyGroupList>
                     {!data.members.some((member) => member.credits.length) && (
                         <p className="text-sm text-muted-foreground">
-                            No one in the family has added a credit.{' '}{familyPermissions(family.me).isOwner && 'Add one in Personal view.'}
+                            No one in the family has added a credit.{' '}
+                            {familyPermissions(family.me).isOwner &&
+                                'Add one in Personal view.'}
                         </p>
                     )}
                     {orderFamilyMembers(family.me, data.members).map(
@@ -87,7 +90,7 @@ export function FamilyCredits({
                                             <p className="text-sm">
                                                 {item.name}
                                             </p>
-                                            <p className="text-xs text-muted-foreground">{`Ends ${item.endDate}`}</p>
+                                            <p className="text-xs text-muted-foreground">{`Ends ${formatDay(item.endDate)}`}</p>
                                         </div>
                                         <div className="text-right">
                                             <FamilyMoney

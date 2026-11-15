@@ -1,7 +1,7 @@
-import { FamilyMemberLink } from './FamilyMemberLink';
+import { formatDay } from './formatDay';
 import { Link } from '@tanstack/react-router';
 import { Receipt } from 'lucide-react';
-import { FamilyMoney, rowClass } from './shared';
+import { FamilyMoney, rowClass, staticRowClass } from './shared';
 import type { FamilyLedgerItem } from './types';
 export function FamilyLedgerRows({ items }: { items: FamilyLedgerItem[] }) {
     return (
@@ -21,14 +21,12 @@ export function FamilyLedgerRows({ items }: { items: FamilyLedgerItem[] }) {
                                 </p>
                                 <p className="text-xs text-muted-foreground flex gap-x-2 min-w-0">
                                     <span className="text-foreground/80">
-                                        <FamilyMemberLink
-                                            memberId={t.spender?.memberId}
-                                        >
+                                        <>
                                             {t.spender?.isMe
                                                 ? 'You'
                                                 : (t.spender?.name ??
                                                   'Unassigned')}
-                                        </FamilyMemberLink>
+                                        </>
                                     </span>
                                     <span className="truncate">
                                         {t.place.kind === 'wallet'
@@ -40,12 +38,7 @@ export function FamilyLedgerRows({ items }: { items: FamilyLedgerItem[] }) {
                                     t.author.memberId !==
                                         t.spender?.memberId && (
                                         <p className="text-xs text-muted-foreground truncate">
-                                            Added by{' '}
-                                            <FamilyMemberLink
-                                                memberId={t.author.memberId}
-                                            >
-                                                {t.author.name}
-                                            </FamilyMemberLink>
+                                            Added by <>{t.author.name}</>
                                         </p>
                                     )}
                             </div>
@@ -64,21 +57,20 @@ export function FamilyLedgerRows({ items }: { items: FamilyLedgerItem[] }) {
                         <div key={t.id}>
                             {(i === 0 || rows[i - 1].date !== t.date) && (
                                 <h3 className="px-3 pt-3 text-xs text-muted-foreground">
-                                    {t.date}
+                                    {formatDay(t.date, true)}
                                 </h3>
                             )}
-                            <div className={rowClass}>
-                                {content}
-                                {t.place.kind === 'wallet' && (
-                                    <Link
-                                        className="text-xs underline"
-                                        to="/family/wallets/$walletId"
-                                        params={{ walletId: t.place.walletId }}
-                                    >
-                                        Open wallet
-                                    </Link>
-                                )}
-                            </div>
+                            {t.place.kind === 'wallet' ? (
+                                <Link
+                                    className={rowClass}
+                                    to="/family/wallets/$walletId"
+                                    params={{ walletId: t.place.walletId }}
+                                >
+                                    {content}
+                                </Link>
+                            ) : (
+                                <div className={staticRowClass}>{content}</div>
+                            )}
                         </div>
                     );
                 },

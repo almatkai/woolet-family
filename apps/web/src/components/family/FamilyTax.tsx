@@ -1,3 +1,4 @@
+import { formatDay } from './formatDay';
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import {
@@ -114,7 +115,10 @@ export function FamilyTax({
                                         <dd>
                                             {row.nextDue ? (
                                                 <>
-                                                    {row.nextDue.date}:{' '}
+                                                    {formatDay(
+                                                        row.nextDue.date,
+                                                    )}
+                                                    :{' '}
                                                     <FamilyMoney
                                                         amount={
                                                             row.nextDue.amount

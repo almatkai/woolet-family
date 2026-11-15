@@ -59,13 +59,14 @@ export function FamilyGroupHeader({
                 />
             </div>
             {wallet && (
-                <Link
-                    className="text-sm underline"
-                    to="/family/wallets/$walletId"
-                    params={{ walletId: wallet.id }}
-                >
-                    Open child wallet
-                </Link>
+                <Button asChild variant="ghost" size="sm">
+                    <Link
+                        to="/family/wallets/$walletId"
+                        params={{ walletId: wallet.id }}
+                    >
+                        Open child wallet
+                    </Link>
+                </Button>
             )}
             {member.isMe && (
                 <Button variant="ghost" size="sm" onClick={onManage}>

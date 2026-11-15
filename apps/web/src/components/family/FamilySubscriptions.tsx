@@ -1,3 +1,4 @@
+import { formatDay } from './formatDay';
 import { familyPermissions } from './permissions';
 import { trpc } from '@/lib/trpc';
 import { FamilySection, FamilySectionState } from './FamilySectionShared';
@@ -54,7 +55,9 @@ export function FamilySubscriptions({
                         (member) => member.subscriptions.length,
                     ) && (
                         <p className="text-sm text-muted-foreground">
-                            No one in the family has added a subscription.{' '}{familyPermissions(family.me).isOwner && 'Add one in Personal view.'}
+                            No one in the family has added a subscription.{' '}
+                            {familyPermissions(family.me).isOwner &&
+                                'Add one in Personal view.'}
                         </p>
                     )}
                     {orderFamilyMembers(family.me, data.members).map(
@@ -76,7 +79,7 @@ export function FamilySubscriptions({
                                             <p className="text-sm">
                                                 {item.name}
                                             </p>
-                                            <p className="text-xs text-muted-foreground">{`${item.frequency}, next payment: ${item.nextPaymentDate ?? 'Not set'}`}</p>
+                                            <p className="text-xs text-muted-foreground">{`${item.frequency}, next payment: ${item.nextPaymentDate ? formatDay(item.nextPaymentDate) : 'Not set'}`}</p>
                                             <p className="text-xs text-muted-foreground">
                                                 {item.linkedEntityType
                                                     ? 'Paid as loan'
