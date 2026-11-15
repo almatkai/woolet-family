@@ -87,6 +87,13 @@ export function FamilyHome({
         memberId: search.member,
         categoryId: search.category,
     });
+    const memberOverview = trpc.household.overview.useQuery({
+        month, today, currency: search.currency, categoryId: search.category,
+    });
+    const categoryOverview = trpc.household.overview.useQuery({
+        month, today, currency: search.currency, memberId: search.member,
+    });
+    const categoryData = categoryOverview.data as HouseholdOverviewOutput | undefined;
     const transactions = trpc.household.familyTransactions.useQuery({
         month,
         memberId: search.member,
@@ -142,7 +149,7 @@ export function FamilyHome({
         </GlassCard>
     );
     const members = [
-        ...((overview?.filtered ?? overview?.converted)?.members ?? []),
+        ...((memberOverview.data?.filtered ?? memberOverview.data?.converted)?.members ?? []),
     ].sort(
         (a, b) =>
             Number(a.status === 'unassigned') -
@@ -150,7 +157,7 @@ export function FamilyHome({
             Number(b.totals[0]?.amount ?? 0) - Number(a.totals[0]?.amount ?? 0),
     );
     const memberTotal = Number(
-        (overview?.filtered ?? overview?.converted)?.currencies[0]?.expense ??
+        (memberOverview.data?.filtered ?? memberOverview.data?.converted)?.currencies[0]?.expense ??
             0,
     );
     return (
@@ -186,8 +193,8 @@ export function FamilyHome({
                                     className="min-h-10"
                                     onClick={() => setEditing(true)}
                                 >
-                                    <Pencil className="size-4 min-[391px]:hidden" />
-                                    <span className="max-[390px]:sr-only">
+                                    <Pencil className="size-4 min-[361px]:hidden" />
+                                    <span className="max-[360px]:sr-only">
                                         {budget ? 'Edit budget' : 'Set budget'}
                                     </span>
                                 </Button>
@@ -237,7 +244,7 @@ export function FamilyHome({
                                     </span>
                                     {current && (
                                         <>
-                                            <span>{days - day} days to go</span>
+                                            <span>{days - day} {days - day === 1 ? 'day' : 'days'} to go</span>
                                             <span
                                                 className={`ml-auto ${spent > pace ? 'text-amber-800 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-400'}`}
                                             >
@@ -363,7 +370,7 @@ export function FamilyHome({
                     </GlassCard>
                     {!!overview.unconvertedCurrencies.length && (
                         <Notice tone="info">
-                            {overview.unconvertedCurrencies.join(' and ')}{' '}
+                            {new Intl.ListFormat('en').format(overview.unconvertedCurrencies)}{' '}
                             spending isn't in these totals because there's no
                             exchange rate yet. Open Show by currency to see it.
                         </Notice>
@@ -422,9 +429,7 @@ export function FamilyHome({
                 <div className="grid gap-4 lg:grid-cols-5">
                     <div className="contents lg:block lg:col-span-3 lg:space-y-4">
                         <h2 className={sectionLabel}>Who spent what</h2>
-                        {query.error ? (
-                            failure(() => void query.refetch())
-                        ) : !overview ? (
+                        {!overview ? (
                             <div className="space-y-2">
                                 {[0, 1, 2].map((n) => (
                                     <Skeleton
@@ -531,9 +536,7 @@ export function FamilyHome({
                         )}
                         <section className="space-y-3 lg:order-none order-3 lg:col-span-3">
                             <h2 className={sectionLabel}>Daily spending</h2>
-                            {query.error ? (
-                                failure(() => void query.refetch())
-                            ) : !overview ? (
+                            {!overview ? (
                                 <Skeleton className="h-40" />
                             ) : (
                                 <GlassCard className="p-3">
@@ -640,13 +643,14 @@ export function FamilyHome({
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <div className="sr-only">
+                                    <div className="sr-only focus-within:not-sr-only">
                                         {(
                                             overview.filtered ??
                                             overview.converted
                                         ).dailyExpenses.map((d) => (
                                             <button
                                                 key={d.date}
+                                                aria-pressed={search.day === d.date}
                                                 onClick={() =>
                                                     update({
                                                         day:
@@ -657,7 +661,7 @@ export function FamilyHome({
                                                     })
                                                 }
                                             >
-                                                {d.date}
+                                                {formatDay(d.date)}, {money(d.totals[0]?.amount ?? '0')}
                                             </button>
                                         ))}
                                     </div>
@@ -667,21 +671,19 @@ export function FamilyHome({
                     </div>
                     <section className="order-2 lg:order-none lg:col-span-2 space-y-3">
                         <h2 className={sectionLabel}>Where it went</h2>
-                        {query.error ? (
-                            failure(() => void query.refetch())
-                        ) : !overview ? (
+                        {!overview || !categoryOverview.data ? (
                             <Skeleton className="h-56" />
                         ) : (
                             <GlassCard className="p-2 sm:p-3">
                                 <div className="divide-y divide-border dark:divide-white/[0.06]">
-                                    {!(overview.filtered ?? overview.converted)
+                                    {!(categoryData?.filtered ?? categoryData?.converted ?? overview.converted)
                                         .categories.length && (
                                         <p className="p-3 text-sm text-muted-foreground">
                                             No spending in {monthName} yet.
                                         </p>
                                     )}
                                     {(
-                                        overview.filtered ?? overview.converted
+                                        categoryData?.filtered ?? categoryData?.converted ?? overview.converted
                                     ).categories
                                         .slice(0, allCategories ? undefined : 6)
                                         .map((c) => {
@@ -749,7 +751,7 @@ export function FamilyHome({
                                             );
                                         })}
                                 </div>
-                                {(overview.filtered ?? overview.converted)
+                                {(categoryData?.filtered ?? categoryData?.converted ?? overview.converted)
                                     .categories.length > 6 && (
                                     <Button
                                         variant="ghost"
@@ -759,7 +761,7 @@ export function FamilyHome({
                                     >
                                         {allCategories
                                             ? 'Show less'
-                                            : `Show all ${(overview.filtered ?? overview.converted).categories.length}`}
+                                            : `Show all ${(categoryData?.filtered ?? categoryData?.converted ?? overview.converted).categories.length}`}
                                     </Button>
                                 )}
                             </GlassCard>
