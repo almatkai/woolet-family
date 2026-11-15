@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server';
 import { and, desc, eq, gte, inArray, lte, sql, sum } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db';
@@ -15,6 +16,9 @@ import {
 } from '../../db/schema';
 import { currencyExchangeService } from '../currency-exchange-service';
 import { DEMO_RESTRICTED_MESSAGE, getDemoRole } from '../../lib/demo';
+
+import { getHouseholdOverview } from '../../lib/household/overview';
+import { currencyInput, monthInput } from '../../lib/household/query-input';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const isoDateSchema = z.string().regex(ISO_DATE_REGEX, 'Use YYYY-MM-DD format');
@@ -504,7 +508,7 @@ const capabilities: CapabilityDefinition[] = [
   {
     id: 'spending.analyze.v1',
     aliases: ['analyze_spending'],
-    description: 'Aggregate expenses by category and currency for a date range. Do not add amounts across different currencies unless conversion is explicitly requested.',
+    description: "Analyze spending from only the signed-in user's own personal accounts for a date range. For family, we, us, household, wife/husband/kids, or other members, use analyze_family_spending instead. Do not add amounts across different currencies unless conversion is explicitly requested.",
     readOnly: true,
     requiresConfirmation: false,
     introducedAt: '2026-02-21',
@@ -578,6 +582,63 @@ const capabilities: CapabilityDefinition[] = [
           spendingByCategory,
           totalsByCurrency: Object.values(totalsByCurrency),
           currencyRule: 'Amounts are already grouped by original transaction currency. Do not label them as USD or combine currencies unless the user explicitly asks for currency conversion.',
+        },
+      };
+    },
+  },
+  {
+    id: 'family.spending.analyze.v1',
+    aliases: ['analyze_family_spending'],
+    description: 'Use for spending questions about family, we, us, household, my wife/husband/kids, or other family members. Returns the exact family dashboard totals, converted to the display currency using stored exchange rates, with spending by member and category. Adult family members only. Optional memberId filters to that household membership ID; filtered budgets are unavailable.',
+    readOnly: true,
+    requiresConfirmation: false,
+    introducedAt: '2026-11-15',
+    argsSchema: z.object({ month: monthInput, currency: currencyInput.optional(), memberId: z.string().uuid().optional() }).strict(),
+    argsJsonSchema: {
+      type: 'object',
+      properties: {
+        month: { type: 'string', description: 'Calendar month in YYYY-MM format', pattern: '^\\d{4}-\\d{2}$' },
+        currency: { type: 'string', description: 'Display currency code; defaults to the family dashboard currency' },
+        memberId: { type: 'string', format: 'uuid', description: 'Household membership ID to filter spending to one member' },
+      },
+      required: ['month'],
+      additionalProperties: false,
+    },
+    execute: async ({ userId }, args) => {
+      let overview;
+      try {
+        overview = await getHouseholdOverview(db, userId, args);
+      } catch (error) {
+        if (error instanceof TRPCError && (error.code === 'FORBIDDEN' || (error.code === 'NOT_FOUND' && error.message === 'Family not found'))) {
+          throw new Error('Family spending is only available to adult family members.');
+        }
+        throw error;
+      }
+      const spending = overview.filtered ?? overview.converted;
+      const total = spending.currencies[0];
+      return {
+        data: {
+          month: args.month,
+          memberId: args.memberId ?? null,
+          spent: total?.expense ?? '0.00',
+          income: total?.income ?? '0.00',
+          budget: total?.budget ?? null,
+          remaining: total?.remaining ?? null,
+          spendingByMember: spending.members.filter(member => !args.memberId || member.memberId === args.memberId).map(member => ({
+            memberId: member.memberId,
+            name: member.name,
+            spent: member.totals[0]?.amount ?? '0.00',
+            purchases: overview.members.find(row => row.memberId === member.memberId)?.expenseCount ?? 0,
+          })),
+          spendingByCategory: spending.categories.map(category => ({
+            categoryId: category.categoryId,
+            name: category.categoryName,
+            spent: category.totals[0]?.amount ?? '0.00',
+          })),
+          byCurrency: overview.filteredByCurrency ?? overview.byCurrency,
+          unconvertedCurrencies: overview.unconvertedCurrencies,
+          displayCurrency: overview.displayCurrency,
+          note: `Totals converted to ${overview.displayCurrency} at the dashboard's latest stored rates; transfers between family wallets excluded.${overview.unconvertedCurrencies.length ? ' Currencies without rates are excluded from converted totals; see byCurrency.' : ''}${args.memberId ? ' Filtered to one member; household budget and remaining are not apportioned.' : ''}`,
         },
       };
     },

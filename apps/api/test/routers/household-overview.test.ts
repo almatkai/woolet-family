@@ -3,14 +3,24 @@ import { PgDialect } from 'drizzle-orm/pg-core';
 import { householdRouter } from '../../src/routers/household';
 import { currencyExchangeService } from '../../src/services/currency-exchange-service';
 import { familyWalletTransactions, householdBudgets, householdMembers } from '../../src/db/schema';
+import { db as capabilityDb } from '../../src/db';
+import { executeCapability, getCapabilityManifest, isCapabilityReadOnly } from '../../src/services/ai/capability-registry';
+import { buildFamilyContext } from '../../src/services/ai/family-context';
+import { buildSystemPrompt } from '../../src/services/ai/chat-service';
 import { createMockContext } from '../utils';
 
 const home = '11111111-1111-4111-8111-111111111111';
 const categoryId = '22222222-2222-4222-8222-222222222222';
 const dialect = new PgDialect();
 let ratesSpy: ReturnType<typeof spyOn>;
-afterEach(() => ratesSpy?.mockRestore());
-function setup({ role = 'owner', guardian = false, rates = { USD: 1, EUR: 2 }, empty = false }: { role?: string; guardian?: boolean; rates?: Record<string, number>; empty?: boolean } = {}) {
+const originalQuery = capabilityDb.query;
+let selectSpy: ReturnType<typeof spyOn> | undefined;
+afterEach(() => {
+    ratesSpy?.mockRestore();
+    selectSpy?.mockRestore();
+    (capabilityDb as any).query = originalQuery;
+});
+function setup({ role = 'owner', guardian = false, rates = { USD: 1, EUR: 2 }, empty = false, noFamily = false, budgetAmount = '100.00' }: { role?: string; guardian?: boolean; rates?: Record<string, number>; empty?: boolean; noFamily?: boolean; budgetAmount?: string } = {}) {
     const member = (id: string, role: string) => ({ id, householdId: home, userId: id, role, isGuardian: id === 'viewer' && guardian, status: 'active', showBalanceToChildren: false });
     const viewer = member('viewer', role);
     const adult = member('adult', 'adult'); const child = member('child', 'child');
@@ -49,10 +59,10 @@ function setup({ role = 'owner', guardian = false, rates = { USD: 1, EUR: 2 }, e
         select: (fields: any) => ({ from: (table: any) => {
             let where: any;
             const value = () => {
-                if (fields?.membership) return [{ membership: viewer, household: { ownerUserId: 'owner' } }];
+                if (fields?.membership) return noFamily ? [] : [{ membership: viewer, household: { name: 'Martinez', ownerUserId: 'owner' } }];
                 if (table === householdMembers) { record('members', where); return all; }
                 if (table === familyWalletTransactions) { const q = record('wallets', where); expect(q.params[0]).toBe(home); expect(q.params).toHaveLength(3); return wallets; }
-                if (table === householdBudgets) return [{ budget: { categoryId: null, currencyCode: 'USD', amount: '100.00' }, categoryName: null }, { budget: { categoryId, currencyCode: 'USD', amount: '50.00' }, categoryName: 'Food' }];
+                if (table === householdBudgets) return [{ budget: { categoryId: null, currencyCode: 'USD', amount: budgetAmount }, categoryName: null }, { budget: { categoryId, currencyCode: 'USD', amount: '50.00' }, categoryName: 'Food' }];
                 throw Error('Unexpected table');
             };
             const chain: any = { innerJoin: () => chain, leftJoin: () => chain, where: (w: any) => { where = w; return chain; }, limit: async () => value(), then: (resolve: any, reject: any) => Promise.resolve().then(value).then(resolve, reject) }; return chain;
@@ -60,7 +70,7 @@ function setup({ role = 'owner', guardian = false, rates = { USD: 1, EUR: 2 }, e
     };
     ratesSpy = spyOn(currencyExchangeService, 'getExchangeRates').mockResolvedValue(rates);
     const caller = householdRouter.createCaller(createMockContext({ userId: 'viewer', user: { testMode: true } as any, db }));
-    return { caller, reads, personal, wallets, all };
+    return { caller, reads, personal, wallets, all, db };
 }
 test('adults see live personal money, transfer-free child wallet totals, budgets and previous month', async () => {
     const { caller, reads } = setup();
@@ -164,4 +174,149 @@ test('month-to-date comparison clamps to February end and handles year boundarie
     expect((await caller.overview({ month: '2026-03', today: '2026-03-31' })).previousMonthToDateExpense).toBe('62.00');
     personal.push({ ...personal[0], id: 'december', date: '2025-12-10', amount: '9.00' });
     expect((await caller.overview({ month: '2026-01', today: '2026-01-15' })).previousMonthToDateExpense).toBe('9.00');
+});
+
+// Exercise the real capability, query builder, policy, and converter with the
+// same query-aware DB fixture as the dashboard. Only replace DB IO.
+function familyToolFixture(options: Parameters<typeof setup>[0] = {}) {
+    const fixture = setup(options);
+    selectSpy = spyOn(capabilityDb, 'select').mockImplementation(fixture.db.select);
+    (capabilityDb as any).query = fixture.db.query;
+    return { ...fixture, analyze: (args: Record<string, unknown> = { month: '2026-02' }, capabilityId = 'analyze_family_spending') =>
+        executeCapability({ userId: 'viewer', capabilityId, args }) };
+}
+
+test('family capability matches overview for a Martinez-like mixed-currency month including split and wallet rows', async () => {
+    const fixture = familyToolFixture({ budgetAmount: '5000.00' });
+    const { personal, wallets, all } = fixture;
+    all.forEach((row, index) => { row.name = ['Alex Martinez', 'Jordan Martinez', 'Maya Martinez'][index]; });
+    const prototype = personal[0];
+    personal.splice(0, personal.length,
+        { ...prototype, id: 'alex', amount: '3069.15', date: '2026-11-12' },
+        { ...prototype, id: 'split-child', amount: '200.00', date: '2026-11-12', parentTransactionId: 'split-parent' },
+        { ...prototype, id: 'jordan', currencyBalanceId: 'adult-b', amount: '1785.50', currencyBalance: { currencyCode: 'EUR' }, date: '2026-11-12' },
+        { ...prototype, id: 'maya-personal', currencyBalanceId: 'child-b', amount: '30.00', date: '2026-11-12' },
+        { ...prototype, id: 'salary', type: 'income', amount: '8000.00', date: '2026-11-01' },
+    );
+    wallets.forEach(row => { row.transaction.date = '2026-11-12'; });
+    wallets[0].transaction.amount = '56.50';
+    wallets.push({ wallet: { ...wallets[0].wallet, id: 'shared', kind: 'shared', childMemberId: null } as any,
+        transaction: { ...wallets[0].transaction, id: 'alex-wallet', amount: '394.00', categoryId }, categoryName: 'Food' });
+    const overview = await fixture.caller.overview({ month: '2026-11' });
+    const result = await fixture.analyze({ month: '2026-11' });
+    expect(result).toMatchObject({ success: true, capabilityId: 'family.spending.analyze.v1', aliasUsed: 'analyze_family_spending', readOnly: true });
+    const data = result.data as any;
+    const total = overview.converted.currencies[0];
+    expect(data).toMatchObject({ spent: total.expense, income: total.income, budget: total.budget, remaining: total.remaining,
+        displayCurrency: overview.displayCurrency, byCurrency: overview.byCurrency, unconvertedCurrencies: [] });
+    expect(data).toMatchObject({ spent: '4642.40', income: '8000.00', budget: '5000.00', remaining: '357.60' });
+    expect(data.spendingByMember).toEqual(overview.members.map(member => ({ memberId: member.memberId, name: member.name, spent: member.spent, purchases: member.expenseCount })));
+    expect(data.spendingByMember.map((member: any) => [member.name, member.spent, member.purchases])).toEqual([
+        ['Alex Martinez', '3663.15', 3], ['Jordan Martinez', '892.75', 1], ['Maya Martinez', '86.50', 2],
+    ]);
+    expect(data.spendingByCategory).toEqual([{ categoryId, name: 'Food', spent: '4642.40' }]);
+    expect(data.note).toContain('latest stored rates');
+    expect(data.note).toContain('transfers between family wallets excluded');
+    expect(fixture.reads.filter(row => row.table === 'transactions').every(row => !row.sql.includes('parent_transaction_id'))).toBe(true);
+});
+
+for (const options of [{ role: 'child' }, { noFamily: true }]) test(`family capability denies access without financial reads: ${JSON.stringify(options)}`, async () => {
+    const { analyze, reads } = familyToolFixture(options);
+    const result = await analyze();
+    expect(result).toMatchObject({ success: false, error: { message: 'Family spending is only available to adult family members.' } });
+    expect(result.data).toBeUndefined();
+    expect(reads).toHaveLength(0);
+    expect(ratesSpy).not.toHaveBeenCalled();
+});
+
+test('non-guardian family capability includes child wallets but never reads child personal rows', async () => {
+    const { analyze, caller, reads } = familyToolFixture({ role: 'adult' });
+    const overview = await caller.overview({ month: '2026-02' });
+    expect(await analyze({}, 'family.spending.analyze.v1')).toMatchObject({ success: false, error: { code: 'INVALID_ARGS' } });
+    const data = (await analyze()).data as any;
+    expect(data.spent).toBe(overview.converted.currencies[0].expense);
+    expect(data.spendingByMember.find((m: any) => m.memberId === 'child')).toEqual({ memberId: 'child', name: 'child', spent: '5.00', purchases: 1 });
+    expect(reads.filter(row => row.table === 'banks').every(row => row.params[0] !== 'child')).toBe(true);
+    expect(reads.filter(row => row.table === 'transactions').every(row => !row.params.includes('child-b'))).toBe(true);
+    expect(JSON.stringify(data)).not.toContain('child-tx');
+});
+
+test('family capability matches overview display currency and retains missing currencies without summing them', async () => {
+    const { analyze, caller } = familyToolFixture({ rates: { USD: 1 } });
+    const overview = await caller.overview({ month: '2026-02' });
+    const data = (await analyze()).data as any;
+    expect(data.spent).toBe(overview.converted.currencies[0].expense);
+    expect(data.unconvertedCurrencies).toEqual(['EUR']);
+    expect(data.byCurrency).toEqual(overview.byCurrency);
+    expect(data.note).toContain('excluded from converted totals');
+    ratesSpy.mockResolvedValue({ EUR: 1, USD: 0.5 });
+    const inEuros = (await analyze({ month: '2026-02', currency: 'EUR' })).data as any;
+    expect(inEuros).toMatchObject({ spent: '110.00', budget: '200.00', remaining: '90.00', displayCurrency: 'EUR', unconvertedCurrencies: [] });
+});
+
+test('member filter matches dashboard filtered totals and does not expose hidden personal finances', async () => {
+    const { analyze, caller, all, wallets } = familyToolFixture({ role: 'adult' });
+    const memberId = '33333333-3333-4333-8333-333333333333';
+    all[2].member.id = memberId;
+    wallets.forEach(row => { row.wallet.childMemberId = memberId; });
+    const input = { month: '2026-02', memberId };
+    const overview = await caller.overview(input);
+    const data = (await analyze(input)).data as any;
+    expect(data).toMatchObject({ spent: overview.filtered!.currencies[0].expense, income: '0.00', budget: null, remaining: null });
+    expect(data.spendingByMember).toEqual([{ memberId, name: 'child', spent: '5.00', purchases: 1 }]);
+    expect(data.byCurrency.currencies).toEqual([{ currencyCode: 'USD', expense: '5.00', income: '0.00', budget: null, remaining: null }]);
+});
+
+test('family context routes adults using member first names only; children and non-members get none', async () => {
+    const { db, all } = setup();
+    all[0].name = 'Alex Martinez'; all[1].name = 'Jordan Martinez'; all[2].name = 'Maya Martinez';
+    const familyContext = await buildFamilyContext(db, 'viewer');
+    expect(familyContext).toBe('The user is in a family (Martinez) with members Alex, Jordan, Maya; use analyze_family_spending for family questions.');
+    const prompt = buildSystemPrompt({ familyContext, userName: 'Alex', userAliases: ['Alex'], defaultCurrency: 'USD', positionCount: 0, topHoldings: 'None', accounts: [], recommendedCategories: [], today: '2026-11-15' });
+    expect(prompt).toContain(familyContext!);
+    expect(prompt).toContain('family.spending.analyze.v1');
+    expect(prompt).toContain("only the signed-in user's personal accounts");
+    expect(familyContext).not.toContain('@');
+    expect(familyContext).not.toContain('balance');
+    all[0].member.role = 'child';
+    expect(await buildFamilyContext(db, 'viewer')).toBeNull();
+    all[0].member.role = 'owner';
+    all[1].name = null as any;
+    expect(await buildFamilyContext(db, 'viewer')).not.toContain('adult@example.com');
+    ratesSpy.mockRestore();
+    expect(await buildFamilyContext(setup({ noFamily: true }).db, 'viewer')).toBeNull();
+});
+
+test('manifest steers family questions away from personal spending and marks the family alias read-only', () => {
+    const manifest = getCapabilityManifest();
+    const family = manifest.capabilities.find(capability => capability.id === 'family.spending.analyze.v1')!;
+    expect(family).toMatchObject({ readOnly: true, requiresConfirmation: false, aliases: ['analyze_family_spending'] });
+    expect(family.argsSchema.required).toEqual(['month']);
+    for (const phrase of ['family', 'we', 'us', 'household', 'wife/husband/kids', 'other family members']) expect(family.description).toContain(phrase);
+    expect(manifest.capabilities.find(capability => capability.id === 'spending.analyze.v1')!.description).toContain("only the signed-in user's own personal accounts");
+    expect(isCapabilityReadOnly('family.spending.analyze.v1')).toBe(true);
+    expect(isCapabilityReadOnly('analyze_family_spending')).toBe(true);
+});
+
+test('read-only family capability is available by ID and alias to demo adults', async () => {
+    familyToolFixture();
+    const keys = ['DEMO_OWNER_USER_ID', 'DEMO_PARTNER_USER_ID', 'DEMO_CHILD_USER_ID'] as const;
+    const previous = keys.map(key => process.env[key]);
+    try {
+        Object.assign(process.env, { DEMO_OWNER_USER_ID: 'user_demoOwner', DEMO_PARTNER_USER_ID: 'user_demoPartner', DEMO_CHILD_USER_ID: 'user_demoChild' });
+        for (const capabilityId of ['family.spending.analyze.v1', 'analyze_family_spending']) {
+            expect(await executeCapability({ userId: 'user_demoOwner', capabilityId, args: { month: '2026-02' } })).toMatchObject({ success: true, readOnly: true, data: { spent: '55.00' } });
+        }
+    } finally {
+        keys.forEach((key, index) => { if (previous[index] === undefined) delete process.env[key]; else process.env[key] = previous[index]; });
+    }
+});
+
+test('family capability validates month, display currency, and membership ID before querying', async () => {
+    const { analyze, reads } = familyToolFixture();
+    for (const args of [{ month: '2026-13' }, { month: '2026-2' }, { month: '2026-02', currency: 'ZZZ' }, { month: '2026-02', memberId: 'child' }]) {
+        expect(await analyze(args)).toMatchObject({ success: false, error: { code: 'INVALID_ARGS' } });
+    }
+    expect(reads).toHaveLength(0);
+    expect(ratesSpy).not.toHaveBeenCalled();
 });

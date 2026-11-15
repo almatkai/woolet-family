@@ -19,6 +19,8 @@ import {
 import { AiUsageService } from './ai-usage-service';
 import { DEMO_AI_QUESTION_LIMIT, getDemoRole } from '../../lib/demo';
 
+import { buildFamilyContext } from './family-context';
+
 const MAX_CHAT_TOOL_TURNS = 5;
 const CHAT_HISTORY_LIMIT = 30;
 const CHAT_SERVICE_ERROR_MESSAGE = "Sorry, Woo's brain hit a service hiccup. Please try again in a moment.";
@@ -371,7 +373,7 @@ function getTransactionDraftFromClientAction(clientAction: unknown) {
 }
 
 async function buildFinancialContext(userId: string) {
-  const [user, holdings, userBanks, categoryRows] = await Promise.all([
+  const [user, holdings, userBanks, categoryRows, familyContext] = await Promise.all([
     db.query.users.findFirst({
       where: eq(users.id, userId),
       columns: { name: true, username: true, email: true, defaultCurrency: true },
@@ -393,6 +395,7 @@ async function buildFinancialContext(userId: string) {
     db.query.categories.findMany({
       where: (category, { or, isNull, eq }) => or(isNull(category.userId), eq(category.userId, userId)),
     }),
+    buildFamilyContext(db, userId),
   ]);
 
   const top = holdings
@@ -411,6 +414,7 @@ async function buildFinancialContext(userId: string) {
   return {
     userName,
     userAliases,
+    familyContext,
     defaultCurrency: user?.defaultCurrency || 'USD',
     positionCount: holdings.length,
     topHoldings: top || 'None',
@@ -444,7 +448,7 @@ function formatContextList<T>(items: T[], formatter: (item: T) => string, fallba
   return items.map(formatter).join('\n');
 }
 
-function buildSystemPrompt(context: Awaited<ReturnType<typeof buildFinancialContext>>) {
+export function buildSystemPrompt(context: Awaited<ReturnType<typeof buildFinancialContext>>) {
   return `You are Woo, a helpful financial assistant.
 
 Use these tools only:
@@ -462,6 +466,7 @@ Rules:
 - For capabilities marked requiresConfirmation=true, ask for confirmation before execution if user intent is unclear.
 - Never assume USD. Use each transaction or aggregate currency exactly as returned by tools.
 - Do not add amounts across different currencies unless the user explicitly asks for conversion; report totals per currency instead.
+- For family, we, us, household, wife/husband/kids, or other family members, use family.spending.analyze.v1 (analyze_family_spending). Use its converted totals in displayCurrency, mention missing rates, and never sum byCurrency across currencies. spending.analyze.v1 covers only the signed-in user's personal accounts.
 - For netWorth.breakdown.v1, answer from totalsByCurrency and account balances first. Only mention convertedTotalNetWorth as a converted estimate if the user asks for a single-currency valuation.
 - Prefer formatted amount fields from tool results when available.
 - Receipt/check/bank PDF/bill-image handling applies only when the current user message includes current attachments or decoded QR data. Do not ask the user to upload a PDF/image because of older chat history.
@@ -479,7 +484,7 @@ Rules:
 - Keep answers concise and practical.
 
 User financial context:
-- Current user: ${context.userName}
+${context.familyContext ? `- ${context.familyContext}\n` : ''}- Current user: ${context.userName}
 - Current user aliases: ${context.userAliases.length ? context.userAliases.join(', ') : 'None'}
 - Default currency: ${context.defaultCurrency}
 - Portfolio positions: ${context.positionCount}
