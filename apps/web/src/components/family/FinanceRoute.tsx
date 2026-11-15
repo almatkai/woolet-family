@@ -1,3 +1,4 @@
+import { FamilyTax } from './FamilyTax';
 import { FamilyInvesting } from './FamilyInvesting';
 import { FamilySubscriptions } from './FamilySubscriptions';
 import { FamilyDeposits } from './FamilyDeposits';
@@ -48,6 +49,7 @@ export function FinanceRoute({
         );
     if (!family) return null;
     if (title === 'Dashboard') return <FamilyHome family={family} />;
+    if (title === 'Tax') return <FamilyTax family={family} />;
     if (title === 'Investing') return <FamilyInvesting family={family} />;
     if (title === 'Accounts') return <FamilyAccounts family={family} />;
     if (title === 'Spending') return <FamilySpending family={family} />;
