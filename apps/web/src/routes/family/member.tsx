@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
     Link,
     useParams,
@@ -173,7 +174,7 @@ export function FamilyMemberPage() {
     const wallet = (
         wallets.data as FamilyWalletsResponse | undefined
     )?.wallets.find((row) => row.childMemberId === memberId);
-    const sections = own
+    const sections: { title: string; rows: { name: string; detail?: ReactNode; totals: { currency: string; amount: string }[] }[] }[] = own
         ? [
               {
                   title: 'Accounts',
@@ -189,10 +190,13 @@ export function FamilyMemberPage() {
                   title: 'Loans',
                   rows: [...own.credits, ...own.mortgages].map((item) => ({
                       name: item.name,
-                      detail:
-                          'monthlyPayment' in item
-                              ? `Monthly payment; ${'endDate' in item ? `ends ${formatDay(item.endDate)}` : `payment day ${item.paymentDay ?? 'not set'}`}`
-                              : '',
+                      detail: (
+                          <>
+                              <FamilyMoney amount={item.monthlyPayment} currency={item.currency} />
+                              {' a month, '}
+                              {'endDate' in item ? `ends ${formatDay(item.endDate)}` : `payment day ${item.paymentDay ?? 'not set'}`}
+                          </>
+                      ),
                       totals: [
                           { currency: item.currency, amount: item.remaining },
                       ],
@@ -463,10 +467,7 @@ export function FamilyMemberPage() {
                                     >
                                         <div>
                                             <p>{row.name}</p>
-                                            {'detail' in row &&
-                                                typeof row.detail ===
-                                                    'string' &&
-                                                row.detail && (
+                                            {row.detail && (
                                                     <p className="text-xs text-muted-foreground">
                                                         {row.detail}
                                                     </p>

@@ -62,7 +62,7 @@ export function FamilyFinancesNav({
     wallets: { error: unknown; data?: { wallets: unknown[] } };
     family: NonNullable<HouseholdOverview>;
     month: string;
-    search: { currency?: string };
+    search: { currency?: string; member?: string; category?: string };
 }) {
     const finances = financesQuery.error ? undefined : loadedFinances;
     const financeMoney = (amount: string | number) => finances ? (
@@ -222,6 +222,7 @@ export function FamilyFinancesNav({
                                 search={{
                                     month,
                                     currency: search.currency,
+                                    ...(to === '/spending' ? { member: search.member, category: search.category } : {}),
                                     view: undefined,
                                 }}
                                 className={rowClass}
