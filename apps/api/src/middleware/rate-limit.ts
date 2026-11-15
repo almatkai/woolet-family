@@ -24,10 +24,20 @@ export const rateLimitMiddleware = async (c: Context, next: Next) => {
 
         if (count >= MAX_REQUESTS) {
             console.warn(`Rate limit exceeded for ${identifier}`);
-            return c.json({ 
-                error: 'Too Many Requests',
-                message: 'You have exceeded the rate limit. Please try again later.'
-            }, 429);
+            const error = {
+                error: {
+                    json: {
+                        message: 'Too many requests. Try again in a minute.',
+                        code: -32029,
+                        data: { code: 'TOO_MANY_REQUESTS', httpStatus: 429 },
+                    },
+                },
+            };
+            // tRPC's SuperJSON transformer unwraps `error.json` for each call.
+            const body = c.req.query('batch') === '1'
+                ? c.req.path.slice(c.req.path.lastIndexOf('/') + 1).split(',').map(() => error)
+                : error;
+            return c.json(body, 429);
         }
 
         // Add current request

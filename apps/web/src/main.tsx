@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
-import { httpLink, loggerLink } from '@trpc/client';
+import { httpBatchLink, loggerLink } from '@trpc/client';
 import { Toaster } from './components/ui/sonner';
 import { trpc } from './lib/trpc';
 import { routeTree } from './routeTree.gen';
@@ -62,7 +62,8 @@ const trpcClient = trpc.createClient({
                 }
             },
         }),
-        httpLink({
+        httpBatchLink({
+            maxURLLength: 2083,
             url: '/trpc',
             async headers() {
                 try {
