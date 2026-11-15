@@ -1,7 +1,7 @@
 import { fromCents, periodBounds, toCents } from './limits';
 
 type CurrencyAmount = { currencyCode: string; amount: string };
-type LedgerRow = {
+export type LedgerRow = {
     id: string;
     date: string;
     kind: 'income' | 'expense' | 'transfer';

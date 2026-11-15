@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import type { db as database } from '../../db';
 import { users } from '../../db/schema/users';
+import { fromCents, toCents } from './limits';
 import { getMembership } from './policy';
 
 export type DB = typeof database;
@@ -14,4 +15,15 @@ export async function householdBaseCurrency(db: DB, ownerUserId: string): Promis
     const owner = await db.query.users.findFirst({ where: eq(users.id, ownerUserId), columns: { defaultCurrency: true } });
     if (!owner) throw new TRPCError({ code: 'NOT_FOUND', message: 'Family owner not found' });
     return owner.defaultCurrency;
+}
+
+/** Rates are base -> foreign, so foreign amounts must be divided by the rate. */
+export function baseConverter(baseCurrency: string, rates: Record<string, number>) {
+    const missing = new Set<string>();
+    const convert = (amount: string, currencyCode: string): string | null => {
+        const rate = currencyCode === baseCurrency ? 1 : rates[currencyCode];
+        if (!Number.isFinite(rate) || rate <= 0) { missing.add(currencyCode); return null; }
+        return fromCents(Math.round(toCents(amount) / rate));
+    };
+    return { convert, missing };
 }
