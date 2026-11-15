@@ -6,25 +6,7 @@ import { canEditFamilyBudget } from './permissions';
 import { FamilyMoney, LimitBar, Notice, sectionLabel } from './shared';
 import type { HouseholdOverview, HouseholdOverviewOutput } from './types';
 
-export function FamilyBudgetCard({
-    family,
-    overview,
-    budget,
-    spent,
-    currency,
-    current,
-    day,
-    days,
-    pace,
-    monthName,
-    comparison,
-    previous,
-    date,
-    expanded,
-    setExpanded,
-    setEditing,
-    money,
-}: {
+type BudgetData = {
     family: NonNullable<HouseholdOverview>;
     overview: HouseholdOverviewOutput;
     budget: number;
@@ -38,11 +20,22 @@ export function FamilyBudgetCard({
     comparison: number;
     previous: Date;
     date: Date;
+};
+
+type BudgetControls = {
     expanded: boolean;
+
     setExpanded: (value: boolean) => void;
     setEditing: (value: boolean) => void;
     money: (amount: string | number) => ReactNode;
+};
+
+export function FamilyBudgetCard({ data, controls }: {
+    data: BudgetData;
+    controls: BudgetControls;
 }) {
+    const { family, overview, budget, spent, currency, current, day, days, pace, monthName, comparison, previous, date } = data;
+    const { expanded, setExpanded, setEditing, money } = controls;
     return (
         <>
             <GlassCard className="p-5 space-y-4">

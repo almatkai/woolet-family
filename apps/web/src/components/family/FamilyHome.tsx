@@ -158,7 +158,10 @@ export function FamilyHome({
             ) : !overview ? (
                 <Skeleton className="h-40 rounded-[22px]" />
             ) : (
-                <FamilyBudgetCard {...{ family, overview, budget, spent, currency, current, day, days, pace, monthName, comparison, previous, date, expanded, setExpanded, setEditing, money }} />
+                <FamilyBudgetCard
+                    data={{ family, overview, budget, spent, currency, current, day, days, pace, monthName, comparison, previous, date }}
+                    controls={{ expanded, setExpanded, setEditing, money }}
+                />
             )}
             {financesQuery.error ? (
                 failure(() => void financesQuery.refetch())
@@ -173,10 +176,10 @@ export function FamilyHome({
                         {memberOverview.error ? failure(() => void memberOverview.refetch()) : <FamilyWhoSpent {...{ members, memberTotal, monthName, search, update, currency, family }} overview={memberOverview.data} />}
                         <FamilyDailySpending {...{ overview, search, update, today, currency, money }} />
                     </div>
-                        <FamilyWhereItWent {...{ overview, categoryOverview, categoryData, allCategories, setAllCategories, search, update, currency, monthName, failure }} />
+                    <FamilyWhereItWent {...{ overview, categoryOverview, categoryData, allCategories, setAllCategories, search, update, currency, monthName, failure }} />
                 </div>
             )}
-                        <FamilyRecentSpending {...{ search, update, overview, month, monthName, transactions, failure }} />
+            <FamilyRecentSpending {...{ search, update, overview, month, monthName, transactions, failure }} />
             <FamilyFinancesNav {...{ financesQuery, finances, overview, spent, monthName, money, taxes, taxYear, wallets, family, month, search }} />
             {editing && (
                 <FamilyBudgetSheet

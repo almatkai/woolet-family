@@ -1,5 +1,4 @@
 import { Plus, X } from 'lucide-react';
-import { familyTotals } from './familyTotals';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
@@ -21,6 +20,7 @@ import {
     SelectItem,
 } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { familyTotals } from './familyTotals';
 import { FamilyMoney, InlineConfirm, Notice, sheetClass } from './shared';
 import { canEditFamilyBudget } from './permissions';
 import type { HouseholdOverview, HouseholdOverviewOutput } from './types';
