@@ -22,7 +22,12 @@ import {
     SheetTitle,
     SheetDescription,
 } from '@/components/ui/sheet';
-import { InlineConfirm, Notice, sheetClass } from './shared';
+import {
+    InlineConfirm,
+    Notice,
+    keepSheetOpenForInlineConfirm,
+    sheetClass,
+} from './shared';
 import { InviteSheet } from './InviteSheet';
 import type { FamilyWallet, HouseholdOverview, WalletKind } from './types';
 
@@ -91,6 +96,7 @@ export function WalletSheet({
             <SheetContent
                 side={compact ? 'bottom' : 'right'}
                 className={sheetClass}
+                onEscapeKeyDown={keepSheetOpenForInlineConfirm}
             >
                 <SheetHeader>
                     <SheetTitle>

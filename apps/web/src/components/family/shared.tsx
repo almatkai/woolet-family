@@ -200,6 +200,7 @@ export function InlineConfirm({
     }, []);
     return (
         <div
+            data-inline-confirm=""
             className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-3"
             onKeyDown={(event) => {
                 if (event.key === 'Escape') {
@@ -232,6 +233,18 @@ export function InlineConfirm({
             </div>
         </div>
     );
+}
+
+/**
+ * Radix sheets listen for Escape on the document in the capture phase, before
+ * InlineConfirm's own handler runs. Pass this as SheetContent's onEscapeKeyDown
+ * so Esc inside an inline confirm only cancels the confirm.
+ */
+export function keepSheetOpenForInlineConfirm(event: KeyboardEvent) {
+    const target = event.target;
+    if (target instanceof Element && target.closest('[data-inline-confirm]')) {
+        event.preventDefault();
+    }
 }
 
 export const staticRowClass = rowClass.split(' transition-colors')[0];
