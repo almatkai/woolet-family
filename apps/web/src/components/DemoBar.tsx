@@ -27,7 +27,7 @@ export function DemoBar({ placement }: { placement: Placement }) {
         if (familyOnly && familyFocusHiddenPaths.has(location.pathname)) void navigate({ to: '/family' });
     };
     const people = (compact: boolean) => (
-        <div role="group" aria-label="View demo as" className={cn('flex gap-1', compact ? 'shrink-0' : 'w-full lg:w-auto')}>
+        <div role="group" aria-label="View demo as" className={cn('flex gap-1', compact ? 'shrink-0' : 'min-w-0 flex-1 rounded-full bg-muted p-1 dark:bg-white/[0.06]')}>
             {demoPeople.map(person => (
                 <button
                     key={person.role}
@@ -39,7 +39,7 @@ export function DemoBar({ placement }: { placement: Placement }) {
                         'focus-visible:ring-2 focus-visible:ring-ring',
                         compact
                             ? 'h-7 rounded-full px-3 text-xs font-semibold'
-                            : 'min-h-11 flex-1 rounded-lg px-3 py-2 lg:flex-none',
+                            : 'h-9 min-w-0 flex-1 rounded-full px-2 text-sm font-semibold',
                         demo.role === person.role
                             ? 'bg-foreground text-background'
                             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -56,7 +56,7 @@ export function DemoBar({ placement }: { placement: Placement }) {
         </div>
     );
     const scopeSelect = (compact: boolean) => (
-        <label className={cn('flex items-center gap-2 text-muted-foreground', compact ? 'hidden lg:flex' : 'min-h-11')}>
+        <label className={cn('flex shrink-0 items-center gap-2 text-muted-foreground', compact && 'hidden lg:flex')}>
             <span className="sr-only">Demo sections</span>
             <select
                 disabled={busy}
@@ -66,7 +66,7 @@ export function DemoBar({ placement }: { placement: Placement }) {
                     'max-w-full text-foreground focus-visible:ring-2 focus-visible:ring-ring',
                     compact
                         ? 'h-7 rounded-full border-0 bg-transparent px-2 text-xs font-semibold'
-                        : 'min-h-11 rounded-lg border border-border bg-card px-2',
+                        : 'h-11 rounded-full border border-border bg-transparent px-3 text-sm font-semibold',
                 )}
             >
                 <option value="all">All features</option>
@@ -116,25 +116,24 @@ export function DemoBar({ placement }: { placement: Placement }) {
                 aria-label="Demo mode"
                 aria-busy={busy}
                 className={cn(
-                    'mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-card px-3 py-2 text-sm min-[471px]:hidden',
+                    'mb-4 space-y-3 rounded-2xl border border-black/[0.06] bg-white/60 p-3 backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.035] min-[471px]:hidden',
                     location.pathname.startsWith('/settings') && 'mx-3 mt-3',
                 )}
             >
-                <div>
-                    <p className="text-muted-foreground">Shared demo family</p>
-                    <p className="text-xs text-muted-foreground">{SHARED_NOTE}</p>
-                </div>
-                <Button variant="ghost" size="sm" disabled={busy} className="ml-auto min-h-11" onClick={() => void demo.exit()}>
-                    {demo.exiting ? 'Exiting…' : 'Exit demo'}
-                </Button>
-                {people(false)}
-                {scopeSelect(false)}
-                {location.pathname !== '/family' && (
-                    <Button variant="ghost" size="sm" className="min-h-11" asChild>
-                        <Link to="/family">Family</Link>
+                <div className="flex items-center gap-3 pl-1">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">Demo</p>
+                        <p className="text-xs text-muted-foreground">{SHARED_NOTE}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" disabled={busy} className="h-10 shrink-0 rounded-full px-3" onClick={() => void demo.exit()}>
+                        {demo.exiting ? 'Exiting…' : 'Exit demo'}
                     </Button>
-                )}
-                {demo.error && <p className="w-full text-destructive" role="alert">{demo.error}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                    {people(false)}
+                    {scopeSelect(false)}
+                </div>
+                {demo.error && <p className="text-sm text-destructive" role="alert">{demo.error}</p>}
             </section>
         </>
     );
