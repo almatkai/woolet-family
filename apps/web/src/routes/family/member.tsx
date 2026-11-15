@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { ChevronLeft } from 'lucide-react';
+import { ActionButton } from '@/components/ui/action-button';
+import { formatDay } from '@/components/family/formatDay';
 import {
     Link,
     useParams,
@@ -21,6 +23,7 @@ import {
 import { canOpenMember, isChildMember } from '@/components/family/permissions';
 import {
     localToday,
+    type HouseholdOverview,
     type HouseholdOverviewOutput,
     type FamilyFinancesOutput,
     type FamilyTransactionsOutput,
@@ -36,7 +39,7 @@ export function FamilyMemberPage() {
     };
     const navigate = useNavigate();
     const month = search.month ?? localToday().slice(0, 7);
-    const [cursor, setCursor] = useState<string | undefined>();
+    const family = trpc.household.get.useQuery();
     const overview = trpc.household.overview.useQuery({
         month,
         currency: search.currency,
@@ -46,48 +49,56 @@ export function FamilyMemberPage() {
         memberId,
         currency: search.currency,
     });
-    const transactions = trpc.household.familyTransactions.useQuery({
-        month,
-        memberId,
-        cursor,
-    });
+    const transactions = trpc.household.familyTransactions.useInfiniteQuery(
+        {
+            month,
+            memberId,
+        },
+        {
+            getNextPageParam: (last: FamilyTransactionsOutput) =>
+                last.nextCursor ?? undefined,
+        },
+    );
     const tax = trpc.household.familyTax.useQuery({ taxYear: 2026 });
     const wallets = trpc.household.wallets.useQuery({ today: localToday() });
     const data = overview.data as HouseholdOverviewOutput | undefined;
     const holdings = finances.data as FamilyFinancesOutput | undefined;
-    const ledger = transactions.data as FamilyTransactionsOutput | undefined;
-    const [pages, setPages] = useState<{
-        key: string;
-        items: FamilyTransactionsOutput['items'];
-    }>({ key: '', items: [] });
-    const pageKey = `${memberId}:${month}`;
-    useEffect(() => {
-        if (!ledger) return;
-        setPages((previous) => ({
-            key: pageKey,
-            items: [
-                ...new Map(
-                    [
-                        ...(previous.key === pageKey && cursor
-                            ? previous.items
-                            : []),
-                        ...ledger.items,
-                    ].map((item) => [item.id, item]),
-                ).values(),
-            ],
-        }));
-    }, [ledger, pageKey, cursor]);
-    const member = data?.members.find((member) => member.memberId === memberId);
+    const ledger = transactions.data
+        ? {
+              items: transactions.data.pages.flatMap(
+                  (page: FamilyTransactionsOutput) => page.items,
+              ),
+          }
+        : undefined;
+    const summaryMember = data?.members.find(
+        (member) => member.memberId === memberId,
+    );
+    const fallbackMember = (family.data as HouseholdOverview)?.members.find(
+        (member) => member.id === memberId,
+    );
+    const member =
+        summaryMember ??
+        (fallbackMember
+            ? {
+                  ...fallbackMember,
+                  memberId: fallbackMember.id,
+                  isMe: fallbackMember.id === family.data?.me.id,
+                  netWorth: null,
+                  spent: null,
+              }
+            : undefined);
     const back = (
-        <Link to="/" search={{ month }}>
-            Back to dashboard
-        </Link>
+        <Button asChild variant="ghost" size="sm">
+            <Link to="/" search={{ month }}>
+                Back to dashboard
+            </Link>
+        </Button>
     );
     const unavailable =
         [overview.error, finances.error, transactions.error].some(
             (error) => error?.data?.code === 'NOT_FOUND',
         ) ||
-        (member && !canOpenMember(member, member));
+        (summaryMember && !canOpenMember(summaryMember, summaryMember));
     if (unavailable)
         return (
             <GlassCard className="p-4 space-y-3">
@@ -95,19 +106,8 @@ export function FamilyMemberPage() {
                 {back}
             </GlassCard>
         );
-    if (!data || !holdings || !ledger)
-        return (
-            <FamilySectionState
-                error={
-                    !!(overview.error || finances.error || transactions.error)
-                }
-                retry={() => {
-                    void overview.refetch();
-                    void finances.refetch();
-                    void transactions.refetch();
-                }}
-            />
-        );
+    if (!member && family.isLoading)
+        return <FamilySectionState error={false} retry={() => {}} />;
     if (!member)
         return (
             <GlassCard className="p-4">
@@ -115,19 +115,18 @@ export function FamilyMemberPage() {
                 {back}
             </GlassCard>
         );
-    const own = holdings.members[0];
-    const currency = data.displayCurrency;
+    const own = holdings?.members[0];
+    const currency = data?.displayCurrency ?? search.currency ?? 'KZT';
     const date = new Date(`${month}-01T12:00:00`);
     const monthName = date.toLocaleDateString('en', { month: 'long' });
     const update = (patch: { month?: string; currency?: string }) => {
-        setCursor(undefined);
         void navigate({
             to: '/family/members/$memberId',
             params: { memberId },
             search: { ...search, ...patch },
         });
     };
-    const block = data.filtered ?? data.converted;
+    const block = data?.filtered ?? data?.converted;
     const child = isChildMember(member);
     const taxRow = (tax.data as FamilyTaxOutput | undefined)?.find(
         (row) => row.memberId === memberId,
@@ -153,7 +152,7 @@ export function FamilyMemberPage() {
                       name: item.name,
                       detail:
                           'monthlyPayment' in item
-                              ? `Monthly payment; ${'endDate' in item ? `ends ${item.endDate}` : `payment day ${item.paymentDay ?? 'not set'}`}`
+                              ? `Monthly payment; ${'endDate' in item ? `ends ${formatDay(item.endDate)}` : `payment day ${item.paymentDay ?? 'not set'}`}`
                               : '',
                       totals: [
                           { currency: item.currency, amount: item.remaining },
@@ -187,7 +186,7 @@ export function FamilyMemberPage() {
               {
                   title: 'Subscriptions',
                   rows: own.subscriptions.map((item) => ({
-                      name: `${item.name}, ${item.frequency}, ${item.nextPaymentDate ? `next ${item.nextPaymentDate}` : 'no next payment date'}${item.linkedEntityType ? ', Paid as loan' : ''}`,
+                      name: `${item.name}, ${item.frequency}, ${item.nextPaymentDate ? `next ${formatDay(item.nextPaymentDate)}` : 'no next payment date'}${item.linkedEntityType ? ', Paid as loan' : ''}`,
                       totals: [
                           {
                               currency: item.currency,
@@ -210,9 +209,11 @@ export function FamilyMemberPage() {
         : [];
     return (
         <div className="space-y-4 md:space-y-6">
-            <Link to="/" search={{ month }}>
-                ‹ Dashboard
-            </Link>
+            <Button asChild variant="ghost" size="sm">
+                <Link to="/" search={{ month }}>
+                    <ChevronLeft className="size-4" /> Dashboard
+                </Link>
+            </Button>
             <PageHeader
                 title={member.name}
                 subtitle={roleLabel(member.role, member.isGuardian)}
@@ -226,9 +227,11 @@ export function FamilyMemberPage() {
                     : `View only. Only ${member.name} can change these.`}
             </p>
             {member.isMe && (
-                <Link to="/" search={{ view: 'personal' }}>
-                    Open Personal view
-                </Link>
+                <ActionButton asChild variant="secondary">
+                    <Link to="/" search={{ view: 'personal' }}>
+                        Open Personal view
+                    </Link>
+                </ActionButton>
             )}
             <FamilyPeriodControls
                 date={date}
@@ -244,15 +247,25 @@ export function FamilyMemberPage() {
                     });
                 }}
             />
+            {[overview, finances, transactions].map(
+                (query, index) =>
+                    (query.error || query.isLoading) && (
+                        <FamilySectionState
+                            key={index}
+                            error={!!query.error}
+                            retry={() => void query.refetch()}
+                        />
+                    ),
+            )}
             <GlassCard className="p-4">
                 <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3">
                     {[
                         ['Net worth', member.netWorth],
                         ['Spent in ' + monthName, member.spent],
-                        ['Owes', holdings.summary.owesConverted],
+                        ['Owes', holdings?.summary.owesConverted],
                         [
                             'Monthly payments',
-                            holdings.summary.monthlyPaymentsConverted,
+                            holdings?.summary.monthlyPaymentsConverted,
                         ],
                     ].map(([label, amount]) => (
                         <div key={label}>
@@ -260,11 +273,17 @@ export function FamilyMemberPage() {
                                 {label}
                             </dt>
                             <dd className="text-base font-semibold tabular-nums">
-                                ≈{' '}
-                                <FamilyMoney
-                                    amount={amount ?? '0'}
-                                    currency={currency}
-                                />
+                                {amount == null ? (
+                                    '—'
+                                ) : (
+                                    <>
+                                        ≈{' '}
+                                        <FamilyMoney
+                                            amount={amount}
+                                            currency={currency}
+                                        />
+                                    </>
+                                )}
                             </dd>
                         </div>
                     ))}
@@ -273,7 +292,7 @@ export function FamilyMemberPage() {
             <h2 className="text-sm font-semibold">Spending in {monthName}</h2>
             <div className="grid gap-4 lg:grid-cols-2">
                 <GlassCard className="p-3">
-                    {block.categories.map((category) => (
+                    {block?.categories.map((category) => (
                         <div
                             key={category.categoryId ?? 'none'}
                             className="flex justify-between gap-3 py-3 text-sm"
@@ -289,20 +308,17 @@ export function FamilyMemberPage() {
                     ))}
                 </GlassCard>
                 <GlassCard className="p-2 sm:p-3">
-                    <FamilyLedgerRows
-                        items={
-                            pages.key === pageKey ? pages.items : ledger.items
-                        }
-                    />
-                    {!ledger.items.length && (
+                    <FamilyLedgerRows items={ledger?.items ?? []} />
+                    {ledger && !ledger.items.length && (
                         <p className="p-3 text-sm text-muted-foreground">
                             No spending in {monthName} yet.
                         </p>
                     )}
-                    {ledger.nextCursor && (
+                    {transactions.hasNextPage && (
                         <Button
                             variant="ghost"
-                            onClick={() => setCursor(ledger.nextCursor!)}
+                            disabled={transactions.isFetchingNextPage}
+                            onClick={() => void transactions.fetchNextPage()}
                         >
                             Show more
                         </Button>
@@ -337,12 +353,12 @@ export function FamilyMemberPage() {
                 ))}
             {child && wallet && (
                 <GlassCard className="p-3">
-                    <Link
+                    <Button asChild variant="ghost" size="sm"><Link
                         to="/family/wallets/$walletId"
                         params={{ walletId: wallet.id }}
                     >
                         Wallet: {wallet.name}
-                    </Link>
+                    </Link></Button>
                     {wallet.limitSummary && (
                         <LimitBar
                             spent={Number(wallet.limitSummary.spent)}
@@ -388,7 +404,7 @@ export function FamilyMemberPage() {
                         </p>
                         {taxRow.nextDue && (
                             <p>
-                                Next due {taxRow.nextDue.date}:{' '}
+                                Next due {formatDay(taxRow.nextDue.date)}:{' '}
                                 <FamilyMoney
                                     amount={taxRow.nextDue.amount}
                                     currency={taxRow.currency}
