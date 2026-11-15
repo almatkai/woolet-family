@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ScopeSwitchRow } from '@/components/family/ScopeSwitch';
 import posthog from 'posthog-js';
 import { useForm } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
@@ -1458,6 +1459,7 @@ export function SpendingPage() {
                         )}
                     />
             </PageHeader>
+            <ScopeSwitchRow />
 
             <div className="w-full max-w-5xl mx-auto px-4 flex flex-col items-center">
             {incomingSplitRequests && incomingSplitRequests.length > 0 && (

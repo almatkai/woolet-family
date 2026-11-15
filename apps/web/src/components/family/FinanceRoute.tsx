@@ -1,5 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ComponentType } from 'react';
-import { createPortal } from 'react-dom';
+import type { ComponentType } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,23 +14,7 @@ export function FinanceRoute({
     personal: ComponentType;
     title: string;
 }) {
-    const { view, family, query, setView, canUseFamily } = useFinanceView();
-    const container = useRef<HTMLDivElement>(null);
-    const [target, setTarget] = useState<HTMLElement | null>(null);
-    useLayoutEffect(() => {
-        if (view !== 'personal' || !canUseFamily) return;
-        const heading = container.current?.querySelector('h1');
-        const header = heading?.parentElement?.parentElement;
-        if (!header) return;
-        const slot = document.createElement('div');
-        slot.className = 'flex flex-wrap items-center gap-2';
-        header.after(slot);
-        setTarget(slot);
-        return () => {
-            slot.remove();
-            setTarget(null);
-        };
-    }, [view, canUseFamily, query.isLoading]);
+    const { view, family, query, setView } = useFinanceView();
     if (query.isLoading)
         return (
             <div className="space-y-4">
@@ -51,10 +34,8 @@ export function FinanceRoute({
         );
     if (view === 'personal')
         return (
-            <div ref={container}>
-                <Personal />
-                {target && createPortal(<ScopeSwitch />, target)}
-            </div>
+            // Personal pages render <ScopeSwitchRow /> under their own PageHeader.
+            <Personal />
         );
     if (!family) return null;
     const members = family.members

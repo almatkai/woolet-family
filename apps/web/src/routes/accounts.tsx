@@ -1,5 +1,6 @@
 
 import { useMemo, useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { ScopeSwitchRow } from '@/components/family/ScopeSwitch';
 import posthog from 'posthog-js';
 import { motion, useAnimation, useMotionValue, useSpring, useTransform, useMotionTemplate } from 'framer-motion';
 import { DeleteConfirm } from '@/components/DeleteConfirm';
@@ -765,6 +766,7 @@ export function AccountsPage() {
                 />
                 <AddBankSheet />
             </PageHeader>
+            <ScopeSwitchRow />
 
             <AccountActionSheet
                 account={selectedAccount}

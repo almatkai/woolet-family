@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { ScopeSwitchRow } from '@/components/family/ScopeSwitch';
 import posthog from 'posthog-js';
 import { trpc } from '@/lib/trpc';
 import { GlassCard, StatTile, tint } from '@/components/ui/glass';
@@ -408,6 +409,7 @@ export function InvestingPage() {
                     }
                 />
             </PageHeader>
+            <ScopeSwitchRow />
 
             {/* Edit Transaction Sheet */}
             <EditInvestmentTransactionSheet

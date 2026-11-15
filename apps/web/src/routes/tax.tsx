@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ScopeSwitchRow } from '@/components/family/ScopeSwitch';
 import { format, parseISO } from 'date-fns';
 import { Calculator, Wallet, Scale, Percent, Pencil, Plus } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
@@ -92,6 +93,7 @@ export function TaxPage() {
                     </ActionButton>
                 )}
             </PageHeader>
+            <ScopeSwitchRow />
             <div className="space-y-2">
                 <Segmented
                     value={year}
