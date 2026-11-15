@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure } from '../lib/trpc';
 import { baseConverter, dashboardMembership, householdBaseCurrency, memberName, moneyAmount, orderFamilyMembers, readFamilyMembers } from '../lib/household/dashboard';
+import { readFamilyInvestments } from '../lib/household/investment-reads';
 import { readBankHierarchy, readMemberProducts } from '../lib/household/finance-reads';
 import { canViewMemberFinances } from '../lib/household/policy';
 import { currencyInput } from '../lib/household/query-input';
@@ -50,7 +51,7 @@ export const householdFamilyFinanceProcedures = {
             const visible = all.filter(r => canViewMemberFinances(viewer, r.member) && (!input.memberId || input.memberId === r.member.id));
             if (input.memberId && !visible.length) throw new TRPCError({ code: 'NOT_FOUND', message: 'Member not found' });
             const displayCurrency = input.currency ?? await householdBaseCurrency(ctx.db, viewer.household.ownerUserId);
-            const { convert, missing } = baseConverter(displayCurrency, await currencyExchangeService.getExchangeRates(displayCurrency));
+            const { convert, missing } = baseConverter(displayCurrency, await currencyExchangeService.getExchangeRates(displayCurrency, { storedOnly: true }));
             const members: MemberHoldings[] = [];
             for (const row of orderFamilyMembers(visible, ctx.userId)) {
                 const { member } = row;
@@ -77,8 +78,7 @@ export const householdFamilyFinanceProcedures = {
                         return { id: sub.id, name: sub.name, amount: moneyAmount(sub.amount), monthlyAmount: monthlyAmount(String(sub.amount), frequency), currency: sub.currency,
                             frequency, nextPaymentDate: nextSubscriptionDate(sub), linkedEntityType: sub.linkedEntityType === 'credit' || sub.linkedEntityType === 'mortgage' ? sub.linkedEntityType : null };
                     }),
-                    // B8 supplies a stored-price-only read in the next stage.
-                    investments: null,
+                    investments: await readFamilyInvestments(ctx.db, member.userId),
                 });
             }
             const balances = amounts(), owes = amounts(), owed = amounts(), monthlyPayments = amounts();
@@ -99,7 +99,7 @@ export const householdFamilyFinanceProcedures = {
                 balances: balances.rows(), balancesConverted: sumConverted(balances.rows()), accountsCount,
                 owes: owes.rows(), owesConverted: sumConverted(owes.rows()), owed: owed.rows(), owedConverted: sumConverted(owed.rows()),
                 monthlyPayments: monthlyPayments.rows(), monthlyPaymentsConverted: sumConverted(monthlyPayments.rows()),
-                creditsCount, mortgagesCount, depositsCount, subscriptionsCount, investmentsValueConverted: null,
+                creditsCount, mortgagesCount, depositsCount, subscriptionsCount, investmentsValueConverted: sumConverted(members.flatMap(m => m.investments?.value ?? [])),
             };
             return { displayCurrency, unconvertedCurrencies: [...missing].sort(), members, summary, internalDebts: internalDebtsOf(members) };
         }),

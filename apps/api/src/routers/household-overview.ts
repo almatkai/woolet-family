@@ -19,7 +19,7 @@ export const householdOverviewProcedures = {
         if (viewer.role === 'child') throw new TRPCError({ code: 'FORBIDDEN' });
         const baseCurrency = await householdBaseCurrency(ctx.db, viewer.household.ownerUserId);
         const displayCurrency = input.currency ?? baseCurrency;
-        const rates = await currencyExchangeService.getExchangeRates(displayCurrency);
+        const rates = await currencyExchangeService.getExchangeRates(displayCurrency, { storedOnly: true });
         const { convert, missing } = baseConverter(displayCurrency, rates);
         const { end } = periodBounds('monthly', `${input.month}-01`);
         const previousDate = new Date(`${input.month}-01T00:00:00Z`);

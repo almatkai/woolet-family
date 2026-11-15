@@ -76,7 +76,7 @@ test('adults see live personal money, transfer-free child wallet totals, budgets
     expect(result.members.find(m => m.memberId === 'adult')).toMatchObject({ name: 'adult', netWorth: '50.00', spent: '10.00', transactionsCount: 1 });
     expect(result.members.find(m => m.memberId === 'child')).toMatchObject({ spent: '35.00', transactionsCount: 4 });
     expect(reads.filter(r => r.table === 'banks').map(r => r.params)).toEqual([['viewer', false], ['adult', false], ['child', false]]);
-    expect(ratesSpy).toHaveBeenCalledTimes(1); expect(ratesSpy).toHaveBeenCalledWith('USD');
+    expect(ratesSpy).toHaveBeenCalledTimes(1); expect(ratesSpy).toHaveBeenCalledWith('USD', { storedOnly: true });
 });
 test('non-guardian adult excludes child personal banks but includes child wallet expense', async () => {
     const { caller, reads } = setup({ role: 'adult' });
@@ -130,7 +130,7 @@ test('display currency converts every figure without changing raw totals', async
     expect(result.categoryBudgets[0]).toMatchObject({ amount: '100.00', spent: '110.00' });
     expect(result.previousMonthExpense).toBe('6.00');
     expect(result.members.find(m => m.memberId === 'viewer')).toMatchObject({ netWorth: '200.00', expenseCount: 1, transactionsCount: 2, canOpen: true });
-    expect(ratesSpy).toHaveBeenCalledWith('EUR');
+    expect(ratesSpy).toHaveBeenCalledWith('EUR', { storedOnly: true });
 });
 test('filters hidden child amounts without exposing personal banks', async () => {
     const { caller, wallets, all, reads } = setup({ role: 'adult' });

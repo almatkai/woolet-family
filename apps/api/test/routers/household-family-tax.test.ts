@@ -4,7 +4,7 @@ import { householdRouter } from '../../src/routers/household';
 import { householdMembers, transactions } from '../../src/db/schema';
 import { taxProfileSchema } from '../../src/lib/tax/input';
 import { annualizationFactor, estimateTax } from '../../src/lib/tax/estimate';
-import { CurrencyService } from '../../src/services/currency';
+import { currencyExchangeService } from '../../src/services/currency-exchange-service';
 import { createMockContext } from '../utils';
 
 const home = '11111111-1111-4111-8111-111111111111';
@@ -46,7 +46,7 @@ function setup(role = 'owner', guardian = false) {
             return chain;
         } }),
     };
-    rateSpy?.mockRestore(); rateSpy = spyOn(CurrencyService, 'getRate').mockResolvedValue(2);
+    rateSpy?.mockRestore(); rateSpy = spyOn(currencyExchangeService, 'getExchangeRates').mockResolvedValue({ USD: 1, EUR: 0.5 });
     return { caller: householdRouter.createCaller(createMockContext({ userId: 'viewer', user: { testMode: true } as any, db })), reads, all, profile, profiles, payments };
 }
 test('family tax has one ordered row per visible member with the canonical estimate and paid amounts', async () => {
@@ -65,7 +65,7 @@ test('transaction-based estimates use only the target non-test income and cached
     const factor = annualizationFactor(2026, today);
     const expected = estimateTax({ ...profiles.adult, wageIncome: 2000 * factor, selfEmploymentIncome: 1000 * factor }, payments.map(p => ({ ...p, amount: Number(p.amount) })), today);
     expect(row.estimatedTax).toBe(expected.total.toFixed(2)); expect(row.paid).toBe(expected.paidSoFar.toFixed(2));
-    expect(rateSpy).toHaveBeenCalledTimes(1); expect(rateSpy).toHaveBeenCalledWith('EUR', 'USD');
+    expect(rateSpy).toHaveBeenCalledTimes(1); expect(rateSpy).toHaveBeenCalledWith('USD', { storedOnly: true });
 });
 test('non-guardian cannot read child tax profiles or payments; guardian can', async () => {
     const { caller, reads } = setup('adult');
@@ -84,4 +84,10 @@ test('family tax validates the same supported years as the personal router', asy
     const { caller, reads } = setup();
     await expect(caller.familyTax({ taxYear: 2027 as any })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(reads).toEqual([]);
+});
+
+test('missing stored income FX fails explicitly instead of understating tax', async () => {
+    const { caller } = setup();
+    rateSpy.mockResolvedValue({ USD: 1 });
+    await expect(caller.familyTax({ taxYear: 2026 })).rejects.toMatchObject({ code: 'PRECONDITION_FAILED', message: 'No stored exchange rate for EUR' });
 });

@@ -36,6 +36,7 @@ export async function transactionIncome(
     ctx: Pick<Context, 'db'> & { userId: string; user: { testMode: boolean } },
     taxYear: 2025 | 2026,
     today: Date,
+    rateFor: (currency: string) => Promise<number> = currency => CurrencyService.getRate(currency, 'USD'),
 ) {
     const rows = await ctx.db
         .select({
@@ -67,7 +68,7 @@ export async function transactionIncome(
     const rates = new Map<string, number>();
     for (const row of rows) {
         if (!rates.has(row.currency))
-            rates.set(row.currency, await CurrencyService.getRate(row.currency, 'USD'));
+            rates.set(row.currency, await rateFor(row.currency));
         const amount = Number(row.amount) * rates.get(row.currency)!;
         if (row.category === 'Freelance Work') selfEmploymentYtd += amount;
         else wageYtd += amount;
@@ -86,6 +87,7 @@ export async function readTaxEstimate(
     ctx: Pick<Context, 'db'> & { userId: string; user: { testMode: boolean } },
     taxYear: 2025 | 2026,
     today: Date,
+    rateFor: (currency: string) => Promise<number> = currency => CurrencyService.getRate(currency, 'USD'),
 ) {
     const row = await ctx.db.query.taxProfiles.findFirst({
         where: and(eq(taxProfiles.userId, ctx.userId), eq(taxProfiles.taxYear, taxYear)),
@@ -93,7 +95,7 @@ export async function readTaxEstimate(
     if (!row) return null;
     const profile = fromRow(row);
     const derivedIncome = profile.useTransactionsForIncome
-        ? await transactionIncome(ctx, taxYear, today)
+        ? await transactionIncome(ctx, taxYear, today, rateFor)
         : null;
     if (derivedIncome) {
         profile.wageIncome = derivedIncome.wageProjected;

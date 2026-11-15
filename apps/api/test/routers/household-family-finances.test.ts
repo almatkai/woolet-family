@@ -27,6 +27,8 @@ function setup(role = 'owner', guardian = false) {
     const sub = (n: number, frequency: string, amount: string, linkedEntityType: string | null = null) => ({ id: uuid(n), userId: 'viewer', name: frequency, frequency, amount,
         linkedEntityType, currency: 'USD', startDate: '2020-01-01', endDate: null, billingDay: 1, status: 'active' });
     const subscriptions = [sub(20, 'daily', '1'), sub(21, 'weekly', '12'), sub(22, 'monthly', '20'), sub(23, 'yearly', '120'), sub(24, 'monthly', '900', 'credit'), sub(25, 'monthly', '800', 'mortgage')];
+    const holdings: any[] = [];
+    const prices = new Map<string, string>();
     const db: any = {
         select: (fields: any) => { let where: any;
             const chain: any = { from: (table: any) => { if (!fields.membership) expect(table).toBe(householdMembers); return chain; }, innerJoin: () => chain,
@@ -35,6 +37,15 @@ function setup(role = 'owner', guardian = false) {
             return chain;
         },
         query: {
+            portfolioHoldings: { findMany: async ({ where }: any) => {
+                const q = record('investments', where); expect(q.params[1]).toBe('0');
+                return holdings.filter(h => h.userId === q.params[0] && Number(h.quantity) > 0);
+            } },
+            stockPrices: { findFirst: async ({ where, orderBy }: any) => {
+                const q = record('prices', where);
+                expect(orderBy.map((o: any) => dialect.sqlToQuery(o).sql)).toEqual(['"stock_prices"."date" desc', '"stock_prices"."id" desc']);
+                const close = prices.get(String(q.params[0])); return close === undefined ? null : { close };
+            } },
             users: { findFirst: async () => ({ defaultCurrency: 'USD' }) },
             banks: { findMany: async ({ where }: any) => {
                 const q = record('banks', where); expect(q.params[1]).toBe(false); const user = q.params[0];
@@ -51,7 +62,7 @@ function setup(role = 'owner', guardian = false) {
     };
     ratesSpy?.mockRestore();
     ratesSpy = spyOn(currencyExchangeService, 'getExchangeRates').mockResolvedValue({ USD: 1, EUR: 2, GBP: 4 });
-    return { caller: householdRouter.createCaller(createMockContext({ userId: 'viewer', user: { testMode: true } as any, db })), reads, all, debts, subscriptions, debt };
+    return { caller: householdRouter.createCaller(createMockContext({ userId: 'viewer', user: { testMode: true } as any, db })), reads, all, debts, subscriptions, debt, holdings, prices };
 }
 test('family finances returns curated item ids, member order and converted summaries', async () => {
     const { caller } = setup();
@@ -63,7 +74,7 @@ test('family finances returns curated item ids, member order and converted summa
     expect(result.members[0].deposits[0]).toMatchObject({ id: uuid(33), interestRate: '5.00' });
     expect(result.summary).toEqual({ balances: [{ currencyCode: 'EUR', amount: '200.00' }, { currencyCode: 'GBP', amount: '100.00' }, { currencyCode: 'USD', amount: '100.00' }],
         balancesConverted: '225.00', accountsCount: 3, owes: [{ currencyCode: 'USD', amount: '1099.00' }], owesConverted: '1099.00', owed: [{ currencyCode: 'USD', amount: '60.00' }], owedConverted: '60.00',
-        monthlyPayments: [{ currencyCode: 'USD', amount: '222.42' }], monthlyPaymentsConverted: '222.42', creditsCount: 1, mortgagesCount: 1, depositsCount: 1, subscriptionsCount: 4, investmentsValueConverted: null });
+        monthlyPayments: [{ currencyCode: 'USD', amount: '222.42' }], monthlyPaymentsConverted: '222.42', creditsCount: 1, mortgagesCount: 1, depositsCount: 1, subscriptionsCount: 4, investmentsValueConverted: '0.00' });
     expect(result.unconvertedCurrencies).toEqual([]); expect(ratesSpy).toHaveBeenCalledTimes(1);
 });
 test('internal linked-user debts appear once and are excluded from owes and owed', async () => {
@@ -113,4 +124,36 @@ test('display currency and missing rates preserve raw figures without cross-curr
     const missing = await caller.familyFinances({});
     expect(missing.summary.balancesConverted).toBe('100.00'); expect(missing.unconvertedCurrencies).toEqual(['EUR']);
     expect(missing.summary.balances).toHaveLength(2);
+});
+
+test('B8 family valuations use stored prices and cost basis, convert currencies and retain precise quantities', async () => {
+    const { caller, holdings, prices } = setup('adult');
+    const holding = (id: string, userId: string, currency: string, quantity: string, cost: string) => ({ id, userId, stockId: id, quantity, averageCostBasis: cost,
+        stock: { userId, ticker: id, currency } });
+    holdings.push(holding('AAPL', 'viewer', 'USD', '2.50000000', '10.00000000'), holding('SAP', 'adult', 'EUR', '3.00000000', '5.00000000'),
+        holding('UNPRICED', 'viewer', 'GBP', '0.12500000', '12.00000000'), holding('CHILD', 'child', 'USD', '100.00000000', '999.00000000'),
+        holding('SOLD', 'viewer', 'USD', '0.00000000', '10.00000000'));
+    prices.set('AAPL', '20.00000000'); prices.set('SAP', '8.00000000');
+    const result = await caller.familyFinances({});
+    expect(result.members[0].investments).toEqual({ holdings: [{ symbol: 'AAPL', quantity: '2.50000000', value: '50.00', currency: 'USD' },
+        { symbol: 'UNPRICED', quantity: '0.12500000', value: '1.50', currency: 'GBP' }], value: [{ currencyCode: 'GBP', amount: '1.50' }, { currencyCode: 'USD', amount: '50.00' }] });
+    expect(result.members[1].investments?.value).toEqual([{ currencyCode: 'EUR', amount: '24.00' }]);
+    expect(result.summary.investmentsValueConverted).toBe('62.38');
+    ratesSpy.mockResolvedValue({ USD: 1 });
+    const missing = await caller.familyFinances({});
+    expect(missing.summary.investmentsValueConverted).toBe('50.00'); expect(missing.unconvertedCurrencies).toEqual(['EUR', 'GBP']);
+});
+test('B8 never reads hidden child holdings and child callers remain forbidden', async () => {
+    const adult = setup('adult');
+    await adult.caller.familyFinances({});
+    expect(adult.reads.filter(r => r.table === 'investments').map(r => r.params[0])).toEqual(['viewer', 'adult']);
+    const child = setup('child');
+    await expect(child.caller.familyFinances({})).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(child.reads).toEqual([]);
+});
+test('B8 rounds fractional holding values only after multiplying full precision', async () => {
+    const { caller, holdings, prices } = setup();
+    holdings.push({ id: 'tiny', userId: 'viewer', stockId: 'tiny', quantity: '0.00500000', averageCostBasis: '1.00000000', stock: { userId: 'viewer', ticker: 'TINY', currency: 'USD' } });
+    prices.set('tiny', '1.00000000');
+    expect((await caller.familyFinances({ memberId: viewerId })).summary.investmentsValueConverted).toBe('0.01');
 });
