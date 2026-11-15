@@ -1,3 +1,5 @@
+import type { ComponentType } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { FamilyTax } from './FamilyTax';
 import { FamilyInvesting } from './FamilyInvesting';
 import { FamilySubscriptions } from './FamilySubscriptions';
@@ -8,8 +10,6 @@ import { FamilyDebts } from './FamilyDebts';
 import { FamilySpending } from './FamilySpending';
 import { FamilyAccounts } from './FamilyAccounts';
 import { FamilyHome } from './FamilyHome';
-import type { ComponentType } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useFinanceView } from './useFinanceView';
 
 export function FinanceRoute({
