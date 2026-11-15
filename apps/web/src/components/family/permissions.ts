@@ -72,3 +72,7 @@ export function canShowChildWallet(
 ) {
     return member.role === 'child' && canEditFamilyBudget(me);
 }
+
+export function isChildMember(member: { role: Role }) {
+    return member.role === 'child';
+}

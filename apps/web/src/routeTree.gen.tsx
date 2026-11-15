@@ -1,3 +1,4 @@
+import { FamilyMemberPage } from './routes/family/member';
 import { FinanceRoute } from '@/components/family/FinanceRoute';
 import { FamilyPage } from './routes/family';
 import { FamilyJoinPage } from './routes/family/join';
@@ -478,6 +479,16 @@ export const familyJoinRoute = createRoute({
         token: typeof search.token === 'string' ? search.token : undefined,
     }),
 });
+export const familyMemberRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/family/members/$memberId',
+    component: FamilyMemberPage,
+    validateSearch: (search: Record<string, unknown>) => ({
+        month: typeof search.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(search.month) ? search.month : undefined,
+        currency: typeof search.currency === 'string' ? search.currency : undefined,
+    }),
+});
+
 export const familyWalletRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/family/wallets/$walletId',
@@ -487,6 +498,7 @@ export const routeTree = rootRoute.addChildren([
     familyRoute,
     familyJoinRoute,
     familyWalletRoute,
+    familyMemberRoute,
     indexRoute,
     accountsRoute,
     spendingRoute,
