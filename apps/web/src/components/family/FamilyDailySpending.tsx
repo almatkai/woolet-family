@@ -7,6 +7,7 @@ import {
     Tooltip,
     Cell,
 } from 'recharts';
+import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/ui/glass';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDay } from './formatDay';
@@ -122,11 +123,14 @@ export function FamilyDailySpending({
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                    <div className="sr-only focus-within:not-sr-only">
+                    <div className="sr-only focus-within:not-sr-only flex flex-wrap gap-1 p-2">
                         {(
                             overview.filtered ?? overview.converted
                         ).dailyExpenses.map((d) => (
-                            <button
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                type="button"
                                 key={d.date}
                                 aria-pressed={search.day === d.date}
                                 onClick={() =>
@@ -140,7 +144,7 @@ export function FamilyDailySpending({
                             >
                                 {formatDay(d.date)},{' '}
                                 {money(d.totals[0]?.amount ?? '0')}
-                            </button>
+                            </Button>
                         ))}
                     </div>
                 </GlassCard>
