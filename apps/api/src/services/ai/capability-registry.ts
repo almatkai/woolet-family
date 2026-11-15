@@ -14,6 +14,7 @@ import {
   users,
 } from '../../db/schema';
 import { currencyExchangeService } from '../currency-exchange-service';
+import { DEMO_RESTRICTED_MESSAGE, getDemoRole } from '../../lib/demo';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const isoDateSchema = z.string().regex(ISO_DATE_REGEX, 'Use YYYY-MM-DD format');
@@ -103,7 +104,7 @@ export interface CapabilityExecutionResult {
   userMessage?: string;
   clientAction?: CapabilityAction;
   error?: {
-    code: 'UNKNOWN_CAPABILITY' | 'INVALID_ARGS' | 'EXECUTION_ERROR';
+    code: 'UNKNOWN_CAPABILITY' | 'INVALID_ARGS' | 'EXECUTION_ERROR' | 'DEMO_READ_ONLY';
     message: string;
     details?: unknown;
   };
@@ -1125,6 +1126,9 @@ export async function executeCapability(input: ExecuteCapabilityInput): Promise<
     };
   }
 
+  if (getDemoRole(input.userId) && !definition.readOnly) {
+    return { success: false, capabilityId, aliasUsed, readOnly: false, error: { code: 'DEMO_READ_ONLY', message: DEMO_RESTRICTED_MESSAGE } };
+  }
   const parsedArgs = definition.argsSchema.safeParse(input.args || {});
   if (!parsedArgs.success) {
     return {

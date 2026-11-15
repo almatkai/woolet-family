@@ -28,11 +28,13 @@ import type {
 export function FamilyMembers({
     family,
     onInvite,
+    readOnly = false,
 }: {
     family: NonNullable<HouseholdOverview>;
     onInvite: () => void;
+    readOnly?: boolean;
 }) {
-    const owner = familyPermissions(family.me).canManageMembers;
+    const owner = familyPermissions(family.me).canManageMembers && !readOnly;
     const [now, setNow] = useState(Date.now);
     useEffect(() => {
         const timer = setInterval(() => setNow(Date.now()), 60_000);

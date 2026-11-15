@@ -52,6 +52,7 @@ import { NotificationsMenu } from '@/components/NotificationsMenu';
 import { usePricing } from '@/components/PricingContext';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { familyFocusHiddenPaths, useDemoIdentity, useDemoScope } from '@/lib/demo';
 
 const navGroups = [
     {
@@ -90,6 +91,8 @@ const AccountIcons = {
 // comingSoonItems removed (unused)
 
 export function AppSidebar() {
+    const { familyOnly } = useDemoScope();
+    const { isDemo } = useDemoIdentity();
     const router = useRouterState();
     const { user } = useUser();
     const { data: limitsData } = trpc.user.getLimits.useQuery();
@@ -131,7 +134,7 @@ export function AppSidebar() {
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu className="gap-0.5">
-                                {group.items.map((item) => (
+                                {group.items.filter(item => !familyOnly || !familyFocusHiddenPaths.has(item.url)).map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton asChild isActive={isActive(item.url)} className={navButtonClass}>
                                             <Link to={item.url} {...preloadProps}>
@@ -219,10 +222,10 @@ export function AppSidebar() {
                                 align="end"
                                 sideOffset={4}
                             >
-                                <DropdownMenuItem onClick={() => setAccountDialogOpen(true)}>
+                                {!isDemo && <DropdownMenuItem onClick={() => setAccountDialogOpen(true)}>
                                     <User className="size-4 mr-2" />
                                     Account
-                                </DropdownMenuItem>
+                                </DropdownMenuItem>}
                                 <DropdownMenuItem asChild>
                                     <Link to="/settings" className="flex items-center" {...preloadProps}>
                                         <Settings className="size-4 mr-2" />

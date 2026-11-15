@@ -2,13 +2,15 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gte, lte, inArray, isNull, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { protectedProcedure } from '../lib/trpc';
-import { familyWallets as wallets, familyWalletTransactions as transactions, familyBudgetLimits as limits, householdMembers } from '../db/schema/households';
+import { familyWallets as wallets, familyWalletTransactions as transactions, familyBudgetLimits as limits, householdMembers, households } from '../db/schema/households';
 import { categories, currencies } from '../db/schema';
 import { assertWalletAccess, getMembership } from '../lib/household/policy';
 import { evaluateLimits, fromCents, periodBounds, toCents } from '../lib/household/limits';
 import { FamilyLimitError } from '../lib/household/errors';
 import { applyDelta, violationPayload } from '../lib/household/wallet-math';
 import type { db as database } from '../db';
+import { createPurchaseProposal } from './household-purchases';
+import { DEFAULT_SHARED_PURCHASE_LIMIT, needsPurchaseApproval } from '../lib/household/purchases';
 const amount = z.union([z.string(), z.number()]).transform(String).refine(v => /^\d+(\.\d{1,2})?$/.test(v) && Number(v)>0 && Number(v)<=1e9).transform(v => fromCents(toCents(v)));
 const name = z.string().trim().min(1).max(60);
 const walletInput = z.object({walletId:z.string().uuid()});
@@ -45,6 +47,14 @@ export const householdWalletProcedures = {
    if(!w) throw new TRPCError({code:'NOT_FOUND'});
    assertWalletAccess(m,w,input.type);
    await validateCategory(tx,input.categoryId); checkDate(input.date,input.today);
+   if(input.type==='expense' && w.kind==='shared') {
+    const [household]=await tx.select().from(households).where(eq(households.id,m.householdId)).for('share');
+    if(!household) throw new TRPCError({code:'NOT_FOUND',message:'Family not found'});
+    if(needsPurchaseApproval(input.amount,household.sharedPurchaseLimit ?? DEFAULT_SHARED_PURCHASE_LIMIT)) {
+     const proposal=await createPurchaseProposal(tx,w,ctx.userId,input);
+     return {approvalRequired:true as const,proposal,transaction:null,balance:w.balance,limitWarnings:[]};
+    }
+   }
    // Charge the period in which the ledger entry is recorded, including backdated expenses.
    const limitWarnings=input.type==='expense' && w.kind==='child' ? await warnings(tx,w.id,input.amount,input.categoryId ?? null,input.date) : [];
    if(m.role==='child' && limitWarnings.length) throw new TRPCError({code:'BAD_REQUEST',message:'This is more than you have left',cause:new FamilyLimitError(limitWarnings[0])});
@@ -52,7 +62,7 @@ export const householdWalletProcedures = {
    if(toCents(balance)<0) throw new TRPCError({code:'BAD_REQUEST',message:'Not enough money in this wallet'});
    const [transaction]=await tx.insert(transactions).values({walletId:w.id,type:input.type,amount:input.amount,categoryId:input.categoryId ?? null,description:input.description,date:input.date,createdByUserId:ctx.userId}).returning();
    await tx.update(wallets).set({balance,updatedAt:new Date()}).where(eq(wallets.id,w.id));
-   return {transaction,balance,limitWarnings};
+   return {approvalRequired:false as const,proposal:null,transaction,balance,limitWarnings};
   });
  }),
  transfer: protectedProcedure.input(z.object({fromWalletId:z.string().uuid(),toWalletId:z.string().uuid(),amount,description,date:day,today:day.optional()})).mutation(async({ctx,input})=>{

@@ -70,7 +70,7 @@ export function FamilyPrivacy({
                             key: 'balance',
                             title: 'Show my balance to children',
                             description:
-                                'They see your total balance in each currency, for example $1,240 · ₸85,000. Not your accounts, banks or transactions.',
+                                'They see your total balance in each currency, for example $1,240 · €850. Not your accounts, banks or transactions.',
                             value: balance,
                             editable: true,
                             pending: personal.isLoading,
