@@ -4,7 +4,7 @@ import { familyPermissions } from './permissions';
 import { trpc } from '@/lib/trpc';
 import { FamilySection, FamilySectionState } from './FamilySectionShared';
 import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
-import { FamilyMoney, MoneyTotals, rowClass } from './shared';
+import { FamilyMoney, MoneyTotals, staticRowClass } from './shared';
 import { orderFamilyMembers } from './permissions';
 import { useFinanceView } from './useFinanceView';
 import { familyTotals } from './familyTotals';
@@ -76,7 +76,7 @@ export function FamilySubscriptions({
                                     </p>
                                 )}
                                 {member.subscriptions.map((item) => (
-                                    <div key={item.id} className={rowClass}>
+                                    <div key={item.id} className={staticRowClass}>
                                         <div className="min-w-0 flex-1">
                                             <p className="text-sm">
                                                 {item.name}

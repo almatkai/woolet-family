@@ -2,7 +2,7 @@ import { useSearch } from '@tanstack/react-router';
 import { trpc } from '@/lib/trpc';
 import { FamilySection, FamilySectionState } from './FamilySectionShared';
 import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
-import { FamilyMoney, rowClass } from './shared';
+import { FamilyMoney, staticRowClass } from './shared';
 import { orderFamilyMembers } from './permissions';
 import { useFinanceView } from './useFinanceView';
 import type { HouseholdOverview, FamilyFinancesOutput } from './types';
@@ -51,7 +51,7 @@ export function FamilyInvesting({
                                     (holding, index) => (
                                         <div
                                             key={`${holding.symbol}-${index}`}
-                                            className={rowClass}
+                                            className={staticRowClass}
                                         >
                                             <div className="flex-1">
                                                 <p className="text-sm font-medium">

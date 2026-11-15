@@ -7,7 +7,7 @@ import {
     FamilySectionTotal,
 } from './FamilySectionShared';
 import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
-import { MoneyTotals, rowClass } from './shared';
+import { MoneyTotals, staticRowClass } from './shared';
 import { orderFamilyMembers } from './permissions';
 import { useFinanceView } from './useFinanceView';
 import { WalletRow } from './WalletRow';
@@ -72,7 +72,7 @@ export function FamilyAccounts({
                                             .map((account) => (
                                                 <div
                                                     key={account.id}
-                                                    className={rowClass}
+                                                    className={staticRowClass}
                                                 >
                                                     <span className="min-w-0 flex-1 text-sm">
                                                         {account.accountName}

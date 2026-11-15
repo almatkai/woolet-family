@@ -8,7 +8,7 @@ import {
     FamilySectionTotal,
 } from './FamilySectionShared';
 import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
-import { FamilyMoney, rowClass } from './shared';
+import { FamilyMoney, staticRowClass } from './shared';
 import { orderFamilyMembers } from './permissions';
 import { useFinanceView } from './useFinanceView';
 import type { HouseholdOverview, FamilyFinancesOutput } from './types';
@@ -63,7 +63,7 @@ export function FamilyDebts({
                                 {member.debts
                                     .filter((d) => !d.counterpartyMemberId)
                                     .map((debt) => (
-                                        <div key={debt.id} className={rowClass}>
+                                        <div key={debt.id} className={staticRowClass}>
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm">
                                                     {debt.type === 'i_owe'
@@ -95,7 +95,7 @@ export function FamilyDebts({
                             </p>
                         )}
                         {data.internalDebts.map((debt) => (
-                            <div key={debt.id} className={rowClass}>
+                            <div key={debt.id} className={staticRowClass}>
                                 <span className="min-w-0 flex-1 text-sm">
                                     <FamilyMemberLink
                                         memberId={debt.fromMemberId}
