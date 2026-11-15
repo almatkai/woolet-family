@@ -883,7 +883,7 @@ export function AddTransactionSheet({
                             <Label>Amount</Label>
                             <div className="relative group">
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors">
-                                    <span className="text-lg font-semibold">{selectedAccount?.currencyCode || '$'}</span>
+                                    <span className="text-lg font-semibold">{selectedAccount?.currencyCode || draftCurrencyCode || preselectedCurrencyCode || '$'}</span>
                                 </div>
                                 <Input
                                     id="amount"
