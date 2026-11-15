@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { GlassCard } from '@/components/ui/glass';
 import { FamilyMoney, Notice } from './shared';
 import type { FamilyFinancesOutput, HouseholdOverviewOutput } from './types';
@@ -7,16 +8,18 @@ export function FamilyPositionCard({
     total,
     currency,
     date,
+    className,
 }: {
     finances: FamilyFinancesOutput;
     total:
         HouseholdOverviewOutput['converted']['currencies'][number] | undefined;
     currency: string;
     date: Date;
+    className?: string;
 }) {
     return (
-        <GlassCard className="p-4">
-            <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3">
+        <GlassCard className={cn('flex flex-col justify-center gap-4 p-5', className)}>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-5">
                 {[
                     [
                         `Income in ${date.toLocaleDateString('en', { month: 'short' })}`,
@@ -33,7 +36,7 @@ export function FamilyPositionCard({
                         <dt className="text-xs text-muted-foreground">
                             {label}
                         </dt>
-                        <dd className="text-base font-semibold tabular-nums">
+                        <dd className="mt-1 text-lg font-semibold tabular-nums">
                             {amount == null ? (
                                 '—'
                             ) : (
