@@ -60,13 +60,13 @@ export function FamilyHome({
         currency: search.currency,
         memberId: search.member,
         categoryId: search.category,
-    });
+    }, { keepPreviousData: true });
     const memberOverview = trpc.household.overview.useQuery({
         month, today, currency: search.currency, categoryId: search.category,
-    });
+    }, { keepPreviousData: true });
     const categoryOverview = trpc.household.overview.useQuery({
         month, today, currency: search.currency, memberId: search.member,
-    });
+    }, { keepPreviousData: true });
     const categoryData = categoryOverview.data as HouseholdOverviewOutput | undefined;
     const transactions = trpc.household.familyTransactions.useQuery({
         month,
@@ -74,7 +74,7 @@ export function FamilyHome({
         categoryId: search.category,
         date: search.day,
         limit: 8,
-    });
+    }, { keepPreviousData: true });
     const wallets = trpc.household.wallets.useQuery({ today });
     const taxYear = currentTaxYear();
     const taxes = trpc.household.familyTax.useQuery({ taxYear });
@@ -82,7 +82,7 @@ export function FamilyHome({
     const overview = query.data as HouseholdOverviewOutput | undefined;
     const financesQuery = trpc.household.familyFinances.useQuery({
         currency: search.currency,
-    });
+    }, { keepPreviousData: true });
     const finances = financesQuery.data as FamilyFinancesOutput | undefined;
     const [editing, setEditing] = useState(false);
     const [expanded, setExpanded] = useState(false);
@@ -102,7 +102,13 @@ export function FamilyHome({
         });
     };
     const total = overview?.converted.currencies[0];
-    const currency = overview?.displayCurrency ?? search.currency ?? 'KZT';
+    // Keep the unit stable while a filtered query loads; never fall back to a hard-coded currency first.
+    const currency =
+        overview?.displayCurrency ??
+        (memberOverview.data as HouseholdOverviewOutput | undefined)?.displayCurrency ??
+        finances?.displayCurrency ??
+        search.currency ??
+        'USD';
     const spent = Number(total?.expense ?? 0);
     const budget = Number(total?.budget ?? 0);
     const days = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
