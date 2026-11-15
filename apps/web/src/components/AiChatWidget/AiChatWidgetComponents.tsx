@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 import { createPortal } from 'react-dom';
 import posthog from 'posthog-js';
 import { trpc } from '@/lib/trpc';
@@ -215,11 +216,9 @@ function getToolTraceLabel(event: Extract<ChatTraceEvent, { type: 'tool_call' | 
 }
 
 function getProviderFailureLabel(event: Extract<ChatTraceEvent, { type: 'provider_failure' }>) {
-    const provider = getReadableToolName(event.provider);
-    if (event.willRetry && event.nextProvider) {
-        return `${provider} failed, trying ${getReadableToolName(event.nextProvider)}`;
-    }
-    return `${provider} failed, no fallback provider`;
+    return event.willRetry
+        ? 'Woo had trouble responding. Trying again…'
+        : 'Woo could not respond. Please try again.';
 }
 
 function isPendingModelMessage(message: Message, index: number, messages: Message[], isLoading: boolean) {
@@ -593,27 +592,18 @@ function ChatSettingsDialog({
 function ChatTrace({ trace }: { trace?: ChatTraceEvent[] }) {
     if (!trace?.length) return null;
 
-    const completedGeneration = [...trace].reverse().find((event) => event.type === 'generation' && event.status === 'completed');
     const providerFailures = trace.filter((event) => event.type === 'provider_failure');
     const toolEvents = trace.filter((event) => event.type === 'tool_call' || event.type === 'tool_result');
-    const hasVisibleTrace = Boolean(completedGeneration) || providerFailures.length > 0 || toolEvents.length > 0;
+    const hasVisibleTrace = providerFailures.length > 0 || toolEvents.length > 0;
 
     if (!hasVisibleTrace) return null;
 
     return (
         <div className="mb-2 space-y-1 border-b border-border/50 pb-2 text-[10px] text-muted-foreground">
-            {completedGeneration?.type === 'generation' && (
-                <div className="flex items-center gap-1.5">
-                    <Cpu className="size-3" />
-                    <span className="truncate">
-                        {completedGeneration.provider || 'provider'} / {completedGeneration.model || 'model'}
-                    </span>
-                </div>
-            )}
             {providerFailures.map((event) => (
                 <div key={`${event.type}-${event.provider}-${event.model}-${event.turn}-${event.willRetry}`} className="flex items-center gap-1.5">
                     <Cpu className="size-3" />
-                    <span className="truncate" title={`${event.provider} / ${event.model}: ${event.error}`}>
+                    <span className="truncate" title={getProviderFailureLabel(event)}>
                         {getProviderFailureLabel(event)}
                     </span>
                 </div>
@@ -857,13 +847,90 @@ function useAngryState(isOpen: boolean, hasSentMessage: boolean) {
 }
 
 // Shared hook for chat logic
-function useChatLogic(currentSessionId: string | null, setCurrentSessionId: (id: string | null) => void, settings: ChatSettings) {
+function useChatLogic(settings: ChatSettings, isOpen: boolean) {
+    const { userId } = useAuth();
+    const [currentSessionId, setSessionId] = useState<string | null>(null);
+    const activeUserId = useRef(userId);
+    activeUserId.current = userId;
+    const sessionVersion = useRef(0);
+    const attemptedRestore = useRef<string | null>(null);
+    const storageKey = userId ? `woo-chat-session:${userId}` : null;
+    const setCurrentSessionId = useCallback((id: string | null) => {
+        setSessionId(id);
+        if (!storageKey) return;
+        try {
+            if (id) localStorage.setItem(storageKey, id);
+            else localStorage.removeItem(storageKey);
+        } catch { /* Chat still works when storage is unavailable. */ }
+    }, [storageKey]);
     const utils = trpc.useUtils();
     const [messages, setMessages] = useState<Message[]>([
         { role: 'model', text: 'Hi! I\'m Woo. Ask me anything about your finances!' }
     ]);
     const [hasSentMessage, setHasSentMessage] = useState(false);
     const [isStreaming, setIsStreaming] = useState(false);
+
+    const { mutateAsync: getSession, isLoading: isLoadingSession } = trpc.ai.getSession.useMutation();
+    const { mutateAsync: deleteSession } = trpc.ai.deleteSession.useMutation();
+
+    const loadSession = useCallback(async ({ sessionId }: { sessionId: string }) => {
+        const version = ++sessionVersion.current;
+        setIsStreaming(false);
+        try {
+            const data = await getSession({ sessionId });
+            if (activeUserId.current !== userId || sessionVersion.current !== version) return;
+            setMessages((data.messages || []).map((message: any) => ({
+                role: message.role,
+                text: message.content,
+                trace: Array.isArray(message.trace) ? message.trace : undefined,
+                clientAction: message.clientAction || undefined,
+            })));
+            setCurrentSessionId(data.id);
+            setHasSentMessage(data.messages.length > 0);
+        } catch (error) {
+            if (activeUserId.current !== userId || sessionVersion.current !== version) return;
+            const code = (error as { data?: { code?: string } }).data?.code;
+            if (code === 'NOT_FOUND' || code === 'BAD_REQUEST') setCurrentSessionId(null);
+            else toast.error('Could not restore chat. Please try again.');
+        }
+    }, [getSession, setCurrentSessionId, userId]);
+
+    useEffect(() => {
+        sessionVersion.current++;
+        attemptedRestore.current = null;
+        setSessionId(null);
+        setMessages([{ role: 'model', text: 'Hi! I\'m Woo. Ask me anything about your finances!' }]);
+        setHasSentMessage(false);
+        setIsStreaming(false);
+    }, [userId]);
+
+    useEffect(() => () => { sessionVersion.current++; }, []);
+
+    useEffect(() => {
+        if (!isOpen) { attemptedRestore.current = null; return; }
+        if (!storageKey || currentSessionId || messages.length !== 1 || messages[0].text !== 'Hi! I\'m Woo. Ask me anything about your finances!') return;
+        let storedId: string | null = null;
+        try { storedId = localStorage.getItem(storageKey); } catch { /* Optional persistence. */ }
+        if (storedId && attemptedRestore.current !== `${storageKey}:${storedId}`) {
+            attemptedRestore.current = `${storageKey}:${storedId}`;
+            void loadSession({ sessionId: storedId });
+        }
+    }, [isOpen, storageKey, currentSessionId, messages, loadSession]);
+
+    const loadSessionMutation = { isLoading: isLoadingSession, mutate: loadSession };
+    const deleteSessionMutation = {
+        mutate: async ({ sessionId }: { sessionId: string }) => {
+            try {
+                await deleteSession({ sessionId });
+                if (activeUserId.current !== userId) return;
+                let storedId: string | null = null;
+                try { storedId = storageKey ? localStorage.getItem(storageKey) : null; } catch { /* Optional persistence. */ }
+                if (sessionId === currentSessionId || sessionId === storedId) handleNewChat();
+                void utils.ai.listSessions.invalidate();
+                toast.success('Chat deleted');
+            } catch { toast.error('Could not delete chat. Please try again.'); }
+        },
+    };
 
     const appendModelTrace = (event: ChatTraceEvent) => {
         setMessages(prev => {
@@ -922,6 +989,8 @@ function useChatLogic(currentSessionId: string | null, setCurrentSessionId: (id:
     };
 
     const streamChat = async (message: string, attachments: ChatAttachment[] = []) => {
+        const version = ++sessionVersion.current;
+        const isCurrent = () => activeUserId.current === userId && sessionVersion.current === version;
         setIsStreaming(true);
         setMessages(prev => [...prev, { role: 'model', text: '', trace: [] }]);
         const requestAttachments = attachments.map(({ name, mimeType, dataUrl, qrText }) => ({
@@ -933,6 +1002,7 @@ function useChatLogic(currentSessionId: string | null, setCurrentSessionId: (id:
 
         try {
             const token = await window.Clerk?.session?.getToken();
+            if (!isCurrent()) return;
             const response = await fetch('/ai/chat/stream', {
                 method: 'POST',
                 credentials: 'include',
@@ -960,6 +1030,7 @@ function useChatLogic(currentSessionId: string | null, setCurrentSessionId: (id:
 
             while (true) {
                 const { done, value } = await reader.read();
+                if (!isCurrent()) { await reader.cancel(); return; }
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
@@ -1027,16 +1098,16 @@ function useChatLogic(currentSessionId: string | null, setCurrentSessionId: (id:
             }
         } catch (error) {
             console.error(error);
-            appendModelText(CHAT_ERROR_MESSAGE);
+            if (isCurrent()) appendModelText(CHAT_ERROR_MESSAGE);
         } finally {
-            setIsStreaming(false);
+            if (isCurrent()) setIsStreaming(false);
         }
     };
 
-    const chatMutation = { isLoading: isStreaming };
+    const chatMutation = { isLoading: isStreaming || isLoadingSession };
 
     const handleSend = (inputValue: string, attachments: ChatAttachment[] = []) => {
-        if (!inputValue.trim()) return;
+        if (!inputValue.trim() || chatMutation.isLoading || !userId) return;
 
         const newMsg: Message = { role: 'user', text: inputValue, attachments };
         setMessages(prev => [...prev, newMsg]);
@@ -1046,12 +1117,14 @@ function useChatLogic(currentSessionId: string | null, setCurrentSessionId: (id:
     };
 
     const handleNewChat = () => {
+        sessionVersion.current++;
+        setIsStreaming(false);
         setMessages([{ role: 'model', text: 'Hi! I\'m Woo. Ask me anything about your finances!' }]);
         setHasSentMessage(false);
         setCurrentSessionId(null);
     };
 
-    return { messages, setMessages, handleSend, handleNewChat, chatMutation, hasSentMessage, setHasSentMessage };
+    return { messages, currentSessionId, handleSend, handleNewChat, chatMutation, loadSessionMutation, deleteSessionMutation, hasSentMessage, setHasSentMessage };
 }
 
 function useResizablePanel(initialSize = { w: 380, h: 600 }) {
@@ -1130,7 +1203,6 @@ function ResizeHandles({ startResize, className }: { startResize: ReturnType<typ
 export function AiChatSidebarItem() {
     const [isOpen, setIsOpen] = useState(false);
     const [view, setView] = useState<'chat' | 'history'>('chat');
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState('');
     const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
     const [previewAttachment, setPreviewAttachment] = useState<ChatAttachment | null>(null);
@@ -1146,32 +1218,11 @@ export function AiChatSidebarItem() {
     const { size, startResize } = useResizablePanel();
 
     const { isAngry, setIsAngry } = useAngryState(isOpen, false);
-    const { messages, setMessages, handleSend, handleNewChat, chatMutation } = useChatLogic(currentSessionId, setCurrentSessionId, chatSettings);
-    const utils = trpc.useUtils();
+    const { messages, currentSessionId, handleSend, handleNewChat, chatMutation, loadSessionMutation, deleteSessionMutation } = useChatLogic(chatSettings, isOpen);
 
     // Queries
     const { data: usage } = trpc.ai.getChatUsage.useQuery(undefined, { enabled: isOpen });
     const { data: sessions, isLoading: isHistoryLoading } = trpc.ai.listSessions.useQuery(undefined, { enabled: isOpen && view === 'history' });
-
-    // Mutations
-    const loadSessionMutation = trpc.ai.getSession.useMutation({
-        onSuccess: (data: any) => {
-            setMessages((data.messages || []).map((m: any) => ({
-                role: m.role,
-                text: m.content,
-                trace: Array.isArray(m.trace) ? m.trace : undefined,
-                clientAction: m.clientAction || undefined,
-            })));
-            setCurrentSessionId(data.id);
-        }
-    });
-
-    const deleteSessionMutation = trpc.ai.deleteSession.useMutation({
-        onSuccess: () => {
-            utils.ai.listSessions.invalidate();
-            toast.success('Chat deleted');
-        }
-    });
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -1393,7 +1444,6 @@ export function AiChatSidebarItem() {
                                                                             currentSessionId === session.id ? "bg-muted" : ""
                                                                         )}
                                                                         onClick={() => {
-                                                                            setMessages([]);
                                                                             setView('chat');
                                                                             loadSessionMutation.mutate({ sessionId: session.id });
                                                                         }}
@@ -1515,7 +1565,6 @@ export function AiChatSidebarItem() {
 export function AiChatFloatingItem({ variant = 'desktop' }: { variant?: 'desktop' | 'mobile' }) {
     const [isOpen, setIsOpen] = useState(false);
     const [view, setView] = useState<'chat' | 'history'>('chat');
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState('');
     const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
     const [previewAttachment, setPreviewAttachment] = useState<ChatAttachment | null>(null);
@@ -1535,9 +1584,8 @@ export function AiChatFloatingItem({ variant = 'desktop' }: { variant?: 'desktop
     const useMobilePanel = variant === 'mobile' || isSmallScreen;
     const { size, startResize } = useResizablePanel();
 
-    const utils = trpc.useUtils();
     const { isAngry, setIsAngry } = useAngryState(isOpen, hasSentMessage);
-    const { messages, setMessages, handleSend, handleNewChat, chatMutation, setHasSentMessage: setMsgSent } = useChatLogic(currentSessionId, setCurrentSessionId, chatSettings);
+    const { messages, handleSend, handleNewChat, chatMutation, loadSessionMutation, deleteSessionMutation, setHasSentMessage: setMsgSent } = useChatLogic(chatSettings, isOpen);
 
 
 
@@ -1588,26 +1636,6 @@ export function AiChatFloatingItem({ variant = 'desktop' }: { variant?: 'desktop
     // Queries
     const { data: usage } = trpc.ai.getChatUsage.useQuery(undefined, { enabled: isOpen });
     const { data: sessions, isLoading: isHistoryLoading } = trpc.ai.listSessions.useQuery(undefined, { enabled: isOpen && view === 'history' });
-
-    // Mutations
-    const loadSessionMutation = trpc.ai.getSession.useMutation({
-        onSuccess: (data: any) => {
-            setMessages((data.messages || []).map((m: any) => ({
-                role: m.role,
-                text: m.content,
-                trace: Array.isArray(m.trace) ? m.trace : undefined,
-                clientAction: m.clientAction || undefined,
-            })));
-            setCurrentSessionId(data.id);
-        }
-    });
-
-    const deleteSessionMutation = trpc.ai.deleteSession.useMutation({
-        onSuccess: () => {
-            utils.ai.listSessions.invalidate();
-            toast.success('Chat deleted');
-        }
-    });
 
     useEffect(() => {
         if (scrollRef.current) {

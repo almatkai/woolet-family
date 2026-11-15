@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { httpBatchLink, loggerLink } from '@trpc/client';
 import { Toaster } from './components/ui/sonner';
@@ -33,6 +33,15 @@ initErrorTracking();
 
 // Create query client
 const queryClient = new FinanceQueryClient({
+    mutationCache: new MutationCache({
+        onSuccess: (_data, _variables, _context, mutation) => {
+            const path = mutation.options.mutationKey?.[0];
+            // All dashboard widgets share this server-computed financial summary.
+            if (Array.isArray(path) && ['transaction', 'account', 'bank', 'settings', 'user', 'currency'].includes(path[0])) {
+                void queryClient.invalidateQueries({ queryKey: [['dashboard', 'getSummary']] });
+            }
+        },
+    }),
     defaultOptions: {
         queries: {
             staleTime: 1000 * 60, // 1 minute

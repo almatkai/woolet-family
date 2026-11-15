@@ -1,6 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
-import { endOfDay, startOfMonth } from 'date-fns';
 import {
     ArrowRight,
     CalendarClock,
@@ -37,89 +36,56 @@ type Tx = {
 // Phone-sized home screen, mirroring the mobile-v2 app: one scrolling column instead of the widget grid
 export function MobileHome() {
     const [addOpen, setAddOpen] = useState(false);
-    // Pin the range once per mount: a fresh `new Date()` each render would change the query keys and refetch forever
-    const [{ now, monthStart, monthEnd }] = useState(() => {
-        const current = new Date();
-        return { now: current, monthStart: startOfMonth(current).toISOString(), monthEnd: endOfDay(current).toISOString() };
-    });
-
-    const { data: preferred } = trpc.currency.getPreferred.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
-    const { data: hierarchy, isLoading: isHierarchyLoading } = trpc.bank.getHierarchy.useQuery();
-    const { data: incomeData } = trpc.transaction.list.useQuery({ type: 'income', startDate: monthStart, excludeFromStats: false, limit: 100 });
-    const { data: expenseData } = trpc.transaction.list.useQuery({ type: 'expense', startDate: monthStart, excludeFromStats: false, limit: 100 });
-    const { data: spending } = trpc.transaction.getSpendingStats.useQuery({ startDate: monthStart, endDate: monthEnd });
+    const [now] = useState(() => new Date());
+    const { data: summary, isLoading: isSummaryLoading } = trpc.dashboard.getSummary.useQuery();
+    const { data: usdRates } = trpc.currency.getExchangeRates.useQuery({ baseCurrency: 'USD' });
     const { data: recent } = trpc.transaction.list.useQuery({ limit: 5, hideAdjustments: true });
     const { data: subscriptionsData } = trpc.subscription.list.useQuery({ includeLinkedEntities: true });
     const { data: portfolio } = trpc.investing.getPortfolioSummary.useQuery();
     const { data: credits } = trpc.credit.list.useQuery();
     const { data: deposits } = trpc.deposit.list.useQuery();
 
-    // Balances per currency; the hero shows the user's default currency (falls back to the largest)
-    const { balances, accountCount, topAccounts } = useMemo(() => {
-        const totals: Record<string, number> = {};
-        const rows: { id: string; name: string; bank: string; balance: number; currency: string }[] = [];
-        let count = 0;
-        (hierarchy || []).forEach((bank: any) => {
-            bank.accounts?.forEach((account: any) => {
-                count += 1;
-                account.currencyBalances?.forEach((cb: any) => {
-                    totals[cb.currencyCode] = (totals[cb.currencyCode] || 0) + Number(cb.balance);
-                });
-                const main = account.currencyBalances?.[0];
-                if (main) {
-                    rows.push({
-                        id: account.id,
-                        name: account.name,
-                        bank: bank.name,
-                        balance: account.currencyBalances.reduce((sum: number, cb: any) => sum + Number(cb.balance), 0),
-                        currency: main.currencyCode,
-                    });
-                }
-            });
-        });
-        return {
-            balances: totals,
-            accountCount: count,
-            topAccounts: rows.sort((a, b) => b.balance - a.balance).slice(0, 2),
-        };
-    }, [hierarchy]);
+    const accountCount = summary?.accountCount ?? 0;
+    const topAccounts: { accountId: string; accountName: string; bankName: string; totalBalance: number }[] = (summary?.accounts ?? []).slice(0, 2);
+    const currencyCount = Object.keys(summary?.totalBalances ?? {}).length;
+    const heroCurrency = summary?.currency ?? 'USD';
+    const heroBalance = summary?.totalBalance ?? 0;
+    const monthFlow = (monthly: { total: number; count: number; chartData: { amount: number }[] } | undefined) => ({
+        total: monthly?.total ?? 0,
+        count: monthly?.count ?? 0,
+        series: monthly?.chartData.map(day => day.amount) ?? [],
+    });
+    const income = monthFlow(summary?.monthlyIncome);
+    const expenses = monthFlow(summary?.monthlyExpenses);
+    const categories: { id: string; name: string; value: number; color?: string }[] = summary?.categoryData ?? [];
+    const spendingTotal = summary?.categoryTotal ?? 0;
 
-    const currencyCount = Object.keys(balances).length;
-    const heroCurrency = preferred?.defaultCurrency && balances[preferred.defaultCurrency] !== undefined
-        ? preferred.defaultCurrency
-        : Object.entries(balances).sort((a, b) => b[1] - a[1])[0]?.[0] || preferred?.defaultCurrency || 'USD';
-    const heroBalance = balances[heroCurrency] ?? 0;
-
-    // Monthly in/out in the hero currency, plus a per-day series for the sparkline
-    const monthFlow = (list: Tx[] | undefined) => {
-        const inCurrency = (list || []).filter((tx) => (tx.currencyBalance?.currencyCode || heroCurrency) === heroCurrency);
-        const byDay = new Array(now.getDate()).fill(0);
-        inCurrency.forEach((tx) => {
-            const day = new Date(tx.date).getDate();
-            if (day >= 1 && day <= byDay.length) byDay[day - 1] += Math.abs(Number(tx.amount));
-        });
-        return {
-            total: inCurrency.reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0),
-            count: inCurrency.length,
-            series: byDay,
-        };
+    // Secondary tiles also combine currencies; never relabel a raw sum as the first row's currency.
+    const sumInMainCurrency = (rows: { amount: number; currency: string }[]) => {
+        if (!summary) return null;
+        let total = 0;
+        for (const row of rows) {
+            if (row.amount === 0) continue;
+            if (row.currency === heroCurrency) { total += row.amount; continue; }
+            const fromRate = row.currency === 'USD' ? 1 : usdRates?.[row.currency];
+            const toRate = heroCurrency === 'USD' ? 1 : usdRates?.[heroCurrency];
+            if (!Number.isFinite(fromRate) || fromRate <= 0 || !Number.isFinite(toRate) || toRate <= 0) return null;
+            total += row.amount * toRate / fromRate;
+        }
+        return total;
     };
-    const income = monthFlow((incomeData as any)?.transactions);
-    const expenses = monthFlow((expenseData as any)?.transactions);
-
-    const categories: { id: string; name: string; value: number; color?: string }[] = (spending as any)?.categoryData || [];
-    const spendingTotal = Number((spending as any)?.total || 0);
 
     const subscriptions = [
         ...((subscriptionsData as any)?.subscriptions || []),
         ...((subscriptionsData as any)?.linkedItems || []),
     ].filter((sub: any) => sub.status === 'active');
-    const subscriptionTotal = subscriptions.reduce((sum: number, sub: any) => sum + Number(sub.amount), 0);
+    const subscriptionTotal = sumInMainCurrency(subscriptions.map((sub: any) => ({ amount: Number(sub.amount), currency: sub.currency || heroCurrency })));
     const activeCredits = (credits || []).filter((credit: any) => credit.status === 'active');
-    const loanPayments = activeCredits.reduce((sum: number, credit: any) => sum + Number(credit.monthlyPayment), 0);
+    const loanPayments = sumInMainCurrency(activeCredits.map((credit: any) => ({ amount: Number(credit.monthlyPayment), currency: credit.currency || heroCurrency })));
     const activeDeposits = (deposits || []).filter((deposit: any) => deposit.status === 'active');
-    const depositBalance = activeDeposits.reduce((sum: number, deposit: any) => sum + Number(deposit.currentBalance), 0);
+    const depositBalance = sumInMainCurrency(activeDeposits.map((deposit: any) => ({ amount: Number(deposit.currentBalance), currency: deposit.currency || heroCurrency })));
     const portfolioValue = Number((portfolio as any)?.totalPortfolioValue ?? (portfolio as any)?.currentValue ?? 0);
+    const convertedPortfolioValue = sumInMainCurrency([{ amount: portfolioValue, currency: 'USD' }]);
     const portfolioReturn = Number((portfolio as any)?.totalReturnPercent ?? 0);
 
     const transactions: Tx[] = (recent as any)?.transactions || [];
@@ -157,22 +123,22 @@ export function MobileHome() {
                 <HeroBackdrop />
                 <GlassEdge />
                 <div className="relative">
-                    {isHierarchyLoading ? (
+                    {isSummaryLoading ? (
                         <Skeleton className="h-8 w-40 bg-white/20" />
                     ) : (
                         <p className="truncate text-[30px] font-bold leading-[1.1] tracking-[-0.035em] tabular-nums">
-                            {formatHeroAmount(heroBalance, heroCurrency)}
+                            {summary ? formatHeroAmount(heroBalance, heroCurrency) : '—'}
                         </p>
                     )}
                     <p className="mt-0.5 text-[11px] text-white/60">
-                        {accountCount} account{accountCount === 1 ? '' : 's'}
+                        {summary ? `${accountCount} account${accountCount === 1 ? '' : 's'}` : 'Totals unavailable'}
                         {currencyCount > 1 ? ` · ${currencyCount} currencies` : ''}
                     </p>
 
                     <div className="mt-3 space-y-1.5">
                         {topAccounts.length > 0 ? topAccounts.map((account, index) => (
                             <div
-                                key={account.id}
+                                key={account.accountId}
                                 className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-white/[0.14] bg-white/[0.11] px-2"
                             >
                                 <div className="flex min-w-0 items-center gap-2.5">
@@ -180,14 +146,14 @@ export function MobileHome() {
                                         <Landmark className={cn('size-3.5', index ? 'text-violet-200' : 'text-white')} />
                                     </span>
                                     <div className="min-w-0">
-                                        <p className="truncate text-xs font-bold">{account.name}</p>
-                                        <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-white/55">{account.bank}</p>
+                                        <p className="truncate text-xs font-bold">{account.accountName}</p>
+                                        <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-white/55">{account.bankName}</p>
                                     </div>
                                 </div>
-                                <CurrencyDisplay amount={account.balance} currency={account.currency} abbreviate className="shrink-0 text-xs font-extrabold tabular-nums" />
+                                <CurrencyDisplay amount={account.totalBalance} currency={heroCurrency} abbreviate className="shrink-0 text-xs font-extrabold tabular-nums" />
                             </div>
                         )) : (
-                            <p className="py-2 text-sm text-white/70">Connect an account to bring your money into focus.</p>
+                            <p className="py-2 text-sm text-white/70">{summary ? 'Connect an account to bring your money into focus.' : 'Account totals unavailable.'}</p>
                         )}
                     </div>
 
@@ -217,7 +183,7 @@ export function MobileHome() {
                         label="Money in"
                         color="#34D399"
                         icon={<TrendingUp className="size-4" />}
-                        value={<CurrencyDisplay amount={income.total} currency={heroCurrency} abbreviate />}
+                        value={summary ? <CurrencyDisplay amount={income.total} currency={heroCurrency} abbreviate /> : '—'}
                         count={income.count}
                         series={income.series}
                         to="/spending"
@@ -226,7 +192,7 @@ export function MobileHome() {
                         label="Money out"
                         color="#FB7185"
                         icon={<TrendingDown className="size-4" />}
-                        value={<CurrencyDisplay amount={expenses.total} currency={heroCurrency} abbreviate />}
+                        value={summary ? <CurrencyDisplay amount={expenses.total} currency={heroCurrency} abbreviate /> : '—'}
                         count={expenses.count}
                         series={expenses.series}
                         to="/spending"
@@ -286,7 +252,7 @@ export function MobileHome() {
                     label="Payments"
                     color="#FDA4AF"
                     icon={<CreditCard className="size-4" />}
-                    value={<CurrencyDisplay amount={loanPayments} currency={(activeCredits[0] as any)?.currency || heroCurrency} abbreviate />}
+                    value={loanPayments === null ? '—' : <CurrencyDisplay amount={loanPayments} currency={heroCurrency} abbreviate />}
                     detail={`${activeCredits.length} active loan${activeCredits.length === 1 ? '' : 's'}`}
                     to="/financial/credits"
                 />
@@ -294,7 +260,7 @@ export function MobileHome() {
                     label="Subscriptions"
                     color="#C4B5FD"
                     icon={<CalendarClock className="size-4" />}
-                    value={<CurrencyDisplay amount={subscriptionTotal} currency={subscriptions[0]?.currency || heroCurrency} abbreviate />}
+                    value={subscriptionTotal === null ? '—' : <CurrencyDisplay amount={subscriptionTotal} currency={heroCurrency} abbreviate />}
                     detail={`${subscriptions.length} recurring`}
                     to="/subscriptions"
                 />
@@ -302,7 +268,7 @@ export function MobileHome() {
                     label="Investments"
                     color="#6EE7B7"
                     icon={<TrendingUp className="size-4" />}
-                    value={<CurrencyDisplay amount={portfolioValue} currency="USD" abbreviate />}
+                    value={convertedPortfolioValue === null ? '—' : <CurrencyDisplay amount={convertedPortfolioValue} currency={heroCurrency} abbreviate />}
                     detail={`${portfolioReturn >= 0 ? '+' : '−'}${Math.abs(portfolioReturn).toFixed(1)}% return`}
                     detailColor={portfolioReturn >= 0 ? '#34D399' : '#FB7185'}
                     to="/investing"
@@ -311,7 +277,7 @@ export function MobileHome() {
                     label="Savings"
                     color="#7DD3FC"
                     icon={<PiggyBank className="size-4" />}
-                    value={<CurrencyDisplay amount={depositBalance} currency={(activeDeposits[0] as any)?.currency || heroCurrency} abbreviate />}
+                    value={depositBalance === null ? '—' : <CurrencyDisplay amount={depositBalance} currency={heroCurrency} abbreviate />}
                     detail={`${activeDeposits.length} deposit${activeDeposits.length === 1 ? '' : 's'}`}
                     to="/financial/deposits"
                 />

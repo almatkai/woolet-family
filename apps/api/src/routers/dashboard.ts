@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { format } from 'date-fns';
+import { currencyExchangeService } from '../services/currency-exchange-service';
 import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import { router, protectedProcedure } from '../lib/trpc';
-import { banks, dashboardLayouts, transactions } from '../db/schema';
+import { banks, dashboardLayouts, transactions, userSettings } from '../db/schema';
 import { cache, CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 
 // Define the layout item schema (based on react-grid-layout)
@@ -48,21 +51,20 @@ export const WIDGET_REGISTRY: Record<string, { name: string; description: string
 
 export const dashboardRouter = router({
     getSummary: protectedProcedure.query(async ({ ctx }) => {
-        const cacheKey = CACHE_KEYS.userDashboard(ctx.userId!, ctx.user.testMode);
-        const cached = await cache.get<any>(cacheKey);
-        if (cached) {
-            console.log('📦 Using cached dashboard summary');
-            return cached;
-        }
-
+        const settings = await ctx.db.query.userSettings.findFirst({
+            where: eq(userSettings.userId, ctx.userId!),
+            columns: { defaultCurrency: true },
+        });
+        const currency = settings?.defaultCurrency || ctx.user.defaultCurrency || 'USD';
         const now = new Date();
-        const currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-        const currentStartDate = currentStart.toISOString().split('T')[0];
-        const prevStartDate = prevStart.toISOString().split('T')[0];
-        const prevEndDate = prevEnd.toISOString().split('T')[0];
-        const todayDate = now.toISOString().split('T')[0];
+        const currentStartDate = format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd');
+        const prevStartDate = format(new Date(now.getFullYear(), now.getMonth() - 1, 1), 'yyyy-MM-dd');
+        const prevEndDate = format(new Date(now.getFullYear(), now.getMonth(), 0), 'yyyy-MM-dd');
+        const todayDate = format(now, 'yyyy-MM-dd');
+        // Version the payload and scope it to the display currency and calendar day.
+        const cacheKey = `${CACHE_KEYS.userDashboard(ctx.userId!, ctx.user.testMode)}:converted-v1:${currency}:${todayDate}`;
+        const cached = await cache.get<any>(cacheKey);
+        if (cached) return cached;
 
         const hierarchy = await ctx.db.query.banks.findMany({
             where: and(
@@ -83,16 +85,34 @@ export const dashboardRouter = router({
         );
 
         const totalBalances: Record<string, number> = {};
-        let accountCount = 0;
+        // Use one USD-based rate snapshot, as in currencyExchangeService.convert.
+        // Fetch lazily so same-currency and empty dashboards do not need FX data.
+        let rateSnapshot: Record<string, number> | undefined;
+        const convert = async (amount: number, from: string): Promise<number> => {
+            if (amount === 0 || from === currency) return amount;
+            rateSnapshot ??= { ...await currencyExchangeService.getExchangeRates('USD'), USD: 1 };
+            const fromRate = rateSnapshot[from];
+            const toRate = rateSnapshot[currency];
+            if (!Number.isFinite(fromRate) || fromRate <= 0 || !Number.isFinite(toRate) || toRate <= 0) {
+                throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'An exchange rate is unavailable. Please update your currency rates.' });
+            }
+            return amount * toRate / fromRate;
+        };
+        const accounts = [];
+        let totalBalance = 0;
 
         for (const bank of hierarchy) {
             for (const account of bank.accounts) {
-                accountCount += 1;
+                let accountTotal = 0;
                 for (const balance of account.currencyBalances) {
                     totalBalances[balance.currencyCode] = (totalBalances[balance.currencyCode] || 0) + Number(balance.balance);
+                    accountTotal += await convert(Number(balance.balance), balance.currencyCode);
                 }
+                accounts.push({ accountId: account.id, accountName: account.name, bankName: bank.name, totalBalance: accountTotal });
+                totalBalance += accountTotal;
             }
         }
+        accounts.sort((a, b) => b.totalBalance - a.totalBalance);
 
         const monthlyTransactions = balanceIds.length ? await ctx.db.query.transactions.findMany({
             where: and(
@@ -106,8 +126,30 @@ export const dashboardRouter = router({
             with: {
                 category: true,
                 currencyBalance: true,
+                childTransactions: {
+                    where: and(eq(transactions.type, 'income'), eq(transactions.lifecycleStatus, 'active')),
+                    with: { currencyBalance: true },
+                },
             },
         }) : [];
+
+        const convertedAmounts = new Map<string, number>();
+        for (const tx of monthlyTransactions) {
+            if (tx.parentTransactionId || (tx.type !== 'income' && tx.type !== 'expense')) continue;
+            convertedAmounts.set(tx.id, await convert(Number(tx.amount), tx.currencyBalance.currencyCode));
+        }
+        // The mobile category breakdown already shows net spending after paybacks.
+        const categoryTotals: Record<string, { id: string; name: string; color: string; value: number }> = {};
+        for (const tx of monthlyTransactions) {
+            if (tx.type !== 'expense' || tx.parentTransactionId || tx.date < currentStartDate || !tx.category) continue;
+            let net = convertedAmounts.get(tx.id)!;
+            for (const child of tx.childTransactions) {
+                net -= await convert(Number(child.amount), child.currencyBalance.currencyCode);
+            }
+            categoryTotals[tx.categoryId] ??= { id: tx.categoryId, name: tx.category.name, color: tx.category.color, value: 0 };
+            categoryTotals[tx.categoryId].value += net;
+        }
+        const categoryData = Object.values(categoryTotals).sort((a, b) => b.value - a.value);
 
         const summarizeType = (type: 'income' | 'expense') => {
             const current = monthlyTransactions.filter(tx =>
@@ -123,18 +165,18 @@ export const dashboardRouter = router({
                 tx.date <= prevEndDate
             );
 
-            const currentTotal = current.reduce((sum, tx) => sum + Number(tx.amount), 0);
-            const previousTotal = previous.reduce((sum, tx) => sum + Number(tx.amount), 0);
+            const currentTotal = current.reduce((sum, tx) => sum + convertedAmounts.get(tx.id)!, 0);
+            const previousTotal = previous.reduce((sum, tx) => sum + convertedAmounts.get(tx.id)!, 0);
             const byDate: Record<string, number> = {};
 
             for (const tx of current) {
-                byDate[tx.date] = (byDate[tx.date] || 0) + Number(tx.amount);
+                byDate[tx.date] = (byDate[tx.date] || 0) + convertedAmounts.get(tx.id)!;
             }
 
             const chartData = [];
             const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
             for (let day = 1; day <= daysInMonth; day += 1) {
-                const date = new Date(now.getFullYear(), now.getMonth(), day).toISOString().split('T')[0];
+                const date = format(new Date(now.getFullYear(), now.getMonth(), day), 'yyyy-MM-dd');
                 chartData.push({ date, amount: byDate[date] || 0 });
                 if (day === now.getDate()) break;
             }
@@ -161,8 +203,13 @@ export const dashboardRouter = router({
         };
 
         const result = {
-            accountCount,
+            currency,
+            accountCount: accounts.length,
+            totalBalance,
+            accounts,
             totalBalances,
+            categoryData,
+            categoryTotal: categoryData.reduce((sum, category) => sum + category.value, 0),
             monthlyIncome: summarizeType('income'),
             monthlyExpenses: summarizeType('expense'),
             generatedAt: new Date().toISOString(),

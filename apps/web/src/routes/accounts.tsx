@@ -713,6 +713,8 @@ export function AccountsPage() {
         () => aggregateBalances(banksWithAccounts.flatMap((bank) => bank.visibleAccounts)).sort((a, b) => b.total - a.total),
         [banksWithAccounts]
     );
+    // Converted total in the user's preferred currency, from the same summary the dashboard uses.
+    const { data: summary } = trpc.dashboard.getSummary.useQuery();
     const accountCount = banksWithAccounts.reduce((sum, bank) => sum + bank.visibleAccounts.length, 0);
 
     const utils = trpc.useUtils();
@@ -788,14 +790,16 @@ export function AccountsPage() {
                             label="Total across banks"
                             color="#8B5CF6"
                             icon={<Wallet className="size-4" />}
-                            value={totals.length === 0 ? '0' : <CurrencyDisplay amount={totals[0].total} currency={totals[0].code} />}
+                            value={summary?.currency
+                                ? <CurrencyDisplay amount={summary.totalBalance ?? 0} currency={summary.currency} />
+                                : totals.length === 0 ? '0' : <CurrencyDisplay amount={totals[0].total} currency={totals[0].code} />}
                             hint={totals.length > 1 ? (
                                 <span className="flex flex-wrap gap-x-2">
-                                    {totals.slice(1).map(({ code, total }) => (
+                                    {totals.map(({ code, total }) => (
                                         <CurrencyDisplay key={code} amount={total} currency={code} abbreviate />
                                     ))}
                                 </span>
-                            ) : 'In one currency'}
+                            ) : summary?.currency ? `In ${summary.currency}` : 'In one currency'}
                         />
                         <StatTile label="Institutions" color="#38BDF8" icon={<Landmark className="size-4" />} value={banks.length} hint="Banks & brokers" />
                         <StatTile
