@@ -101,6 +101,7 @@ export function FamilyHome({
         date: search.day,
         limit: 8,
     });
+    const wallets = trpc.household.wallets.useQuery({ today });
     const taxes = trpc.household.familyTax.useQuery({ taxYear: Number(today.slice(0, 4)) as 2025 | 2026 });
     const [allCategories, setAllCategories] = useState(false);
     const overview = query.data as HouseholdOverviewOutput | undefined;
@@ -980,17 +981,23 @@ export function FamilyHome({
                                 '/tax',
                                 'Taxes',
                                 FileText,
-                                taxes.data
-                                    ? `${taxes.data.filter((t: FamilyTaxRow) => t.hasProfile).length} profiles for ${today.slice(0, 4)}`
-                                    : taxes.error
-                                      ? 'Tax figures unavailable'
-                                      : 'Loading profiles…',
+                                taxes.error
+                                    ? 'Tax figures unavailable'
+                                    : taxes.data
+                                      ? taxes.data.some((t: FamilyTaxRow) => t.hasProfile)
+                                          ? `${taxes.data.filter((t: FamilyTaxRow) => t.hasProfile).length} profiles for ${today.slice(0, 4)}`
+                                          : 'No tax profiles yet'
+                                      : <Skeleton className="h-4 w-28" aria-label="Loading tax profiles" />,
                             ],
                             [
                                 '/family',
                                 'Wallets and members',
                                 Users,
-                                `${family.members.length} members`,
+                                wallets.data
+                                    ? `${wallets.data.wallets.length} wallets, ${family.members.length} members`
+                                    : wallets.error
+                                      ? `Wallet count unavailable, ${family.members.length} members`
+                                      : <Skeleton className="h-4 w-28" aria-label="Loading wallets" />,
                             ],
                         ].map(([to, label, Icon, figure]) => {
                             const RowIcon = Icon as typeof Wallet;
