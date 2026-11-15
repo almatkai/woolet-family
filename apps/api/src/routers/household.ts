@@ -12,6 +12,7 @@ import { householdWalletProcedures } from './household-wallets';
 import { householdMemberFinanceProcedures } from './household-member-finances';
 import { householdOverviewProcedures } from './household-overview';
 import { householdBudgetProcedures } from './household-budgets';
+import { householdFamilyTransactionProcedures } from './household-family-transactions';
 import { householdWalletQueries } from './household-wallet-queries';
 
 type DB = typeof database;
@@ -45,6 +46,7 @@ async function invitationState(db: DB, userId: string, token: string) {
 
 export const householdRouter = router({
     ...householdMemberFinanceProcedures,
+    ...householdFamilyTransactionProcedures,
     ...householdOverviewProcedures,
     ...householdBudgetProcedures,
     ...householdWalletProcedures,
