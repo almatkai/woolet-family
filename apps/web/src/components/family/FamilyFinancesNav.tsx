@@ -43,7 +43,7 @@ export function FamilyFinancesNav({
     monthName,
     money,
     taxes,
-    today,
+    taxYear,
     wallets,
     family,
     month,
@@ -55,7 +55,7 @@ export function FamilyFinancesNav({
     monthName: string;
     money: (amount: string | number) => ReactNode;
     taxes: { error: unknown; data?: FamilyTaxRow[] };
-    today: string;
+    taxYear: number;
     wallets: { error: unknown; data?: { wallets: unknown[] } };
     family: NonNullable<HouseholdOverview>;
     month: string;
@@ -78,7 +78,7 @@ export function FamilyFinancesNav({
                                 finances && (
                                     <>
                                         {finances.summary.accountsCount}{' '}
-                                        accounts, ≈{' '}
+                                        {finances.summary.accountsCount === 1 ? 'account' : 'accounts'}, ≈{' '}
                                         {financeMoney(
                                             finances.summary.balancesConverted,
                                         )}
@@ -130,7 +130,7 @@ export function FamilyFinancesNav({
                                 PiggyBank,
                                 finances &&
                                     (finances.summary.depositsCount
-                                        ? `${finances.summary.depositsCount} deposits`
+                                        ? `${finances.summary.depositsCount} ${finances.summary.depositsCount === 1 ? 'deposit' : 'deposits'}`
                                         : 'No deposits'),
                             ],
                             [
@@ -170,7 +170,7 @@ export function FamilyFinancesNav({
                                     taxes.data.some(
                                         (t: FamilyTaxRow) => t.hasProfile,
                                     ) ? (
-                                        `${taxes.data.filter((t: FamilyTaxRow) => t.hasProfile).length} profiles for ${today.slice(0, 4)}`
+                                        `${taxes.data.filter((t: FamilyTaxRow) => t.hasProfile).length} ${taxes.data.filter((t: FamilyTaxRow) => t.hasProfile).length === 1 ? 'profile' : 'profiles'} for ${taxYear}`
                                     ) : (
                                         'No tax profiles yet'
                                     )
@@ -186,9 +186,9 @@ export function FamilyFinancesNav({
                                 'Wallets and members',
                                 Users,
                                 wallets.data ? (
-                                    `${wallets.data.wallets.length} wallets, ${family.members.length} members`
+                                    `${wallets.data.wallets.length} ${wallets.data.wallets.length === 1 ? 'wallet' : 'wallets'}, ${family.members.length} ${family.members.length === 1 ? 'member' : 'members'}`
                                 ) : wallets.error ? (
-                                    `Wallet count unavailable, ${family.members.length} members`
+                                    `Wallet count unavailable, ${family.members.length} ${family.members.length === 1 ? 'member' : 'members'}`
                                 ) : (
                                     <Skeleton
                                         className="h-4 w-28"

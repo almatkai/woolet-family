@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { Link } from '@tanstack/react-router';
 import { GlassCard } from '@/components/ui/glass';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -98,7 +99,7 @@ export function FamilyWhoSpent({
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             {detail
-                                                ? `${roleLabel(detail.role, detail.isGuardian)}  ${detail.expenseCount} purchases`
+                                                ? `${roleLabel(detail.role, detail.isGuardian)} · ${detail.expenseCount} ${detail.expenseCount === 1 ? 'purchase' : 'purchases'}`
                                                 : m.status === 'former'
                                                   ? 'Former member'
                                                   : 'Unassigned'}
@@ -129,7 +130,7 @@ export function FamilyWhoSpent({
                         <p className="p-3 text-xs text-muted-foreground">
                             Only you so far.{' '}
                             {family.me.canManageMembers && (
-                                <Link to="/family">Invite</Link>
+                                <Button asChild variant="ghost" size="sm"><Link to="/family">Invite</Link></Button>
                             )}
                         </p>
                     )}

@@ -76,7 +76,8 @@ export function FamilyHome({
         limit: 8,
     });
     const wallets = trpc.household.wallets.useQuery({ today });
-    const taxes = trpc.household.familyTax.useQuery({ taxYear: currentTaxYear() });
+    const taxYear = currentTaxYear();
+    const taxes = trpc.household.familyTax.useQuery({ taxYear });
     const [allCategories, setAllCategories] = useState(false);
     const overview = query.data as HouseholdOverviewOutput | undefined;
     const financesQuery = trpc.household.familyFinances.useQuery({
@@ -176,7 +177,7 @@ export function FamilyHome({
                 </div>
             )}
                         <FamilyRecentSpending {...{ search, update, overview, month, monthName, transactions, failure }} />
-            <FamilyFinancesNav {...{ financesQuery, finances, overview, spent, monthName, money, taxes, today, wallets, family, month, search }} />
+            <FamilyFinancesNav {...{ financesQuery, finances, overview, spent, monthName, money, taxes, taxYear, wallets, family, month, search }} />
             {editing && (
                 <FamilyBudgetSheet
                     family={family}
