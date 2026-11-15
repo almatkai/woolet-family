@@ -1,3 +1,5 @@
+import { FamilyPeriodControls } from './FamilyPeriodControls';
+import { FamilyLedgerRows } from './FamilyLedgerRows';
 import {
     ResponsiveContainer,
     BarChart,
@@ -31,15 +33,7 @@ import { ActionButton } from '@/components/ui/action-button';
 import { GlassCard } from '@/components/ui/glass';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
-    SelectLabel,
-    SelectGroup,
-} from '@/components/ui/select';
+
 import { ScopeSwitch } from './ScopeSwitch';
 import { FamilyBudgetSheet } from './FamilyBudgetSheet';
 import { canEditFamilyBudget } from './permissions';
@@ -57,7 +51,6 @@ import {
     type HouseholdOverview,
     type HouseholdOverviewOutput,
     type FamilyFinancesOutput,
-    type FamilyLedgerItem,
     type FamilyTaxRow,
 } from './types';
 
@@ -171,71 +164,7 @@ export function FamilyHome({
             </PageHeader>
             <div className="flex flex-wrap items-center gap-2">
                 <ScopeSwitch />
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        className="size-10"
-                        aria-label="Previous month"
-                        onClick={() => move(-1)}
-                    >
-                        ‹
-                    </Button>
-                    <span className="text-sm">
-                        {monthName} {date.getFullYear()}
-                    </span>
-                    <Button
-                        variant="ghost"
-                        className="size-10"
-                        aria-label="Next month"
-                        onClick={() => move(1)}
-                    >
-                        ›
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                            update({
-                                month: undefined,
-                                member: undefined,
-                                category: undefined,
-                            })
-                        }
-                    >
-                        This month
-                    </Button>
-                    <Select
-                        value={currency}
-                        onValueChange={(v) =>
-                            update({
-                                currency:
-                                    v === overview?.baseCurrency
-                                        ? undefined
-                                        : v,
-                            })
-                        }
-                    >
-                        <SelectTrigger
-                            aria-label="Show totals in"
-                            className="h-9 min-w-[5.5rem] w-auto"
-                        >
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <SelectLabel>Show totals in</SelectLabel>
-                                {overview?.availableCurrencies.map((c) => (
-                                    <SelectItem key={c} value={c}>
-                                        {c} —{' '}
-                                        {new Intl.DisplayNames(['en'], {
-                                            type: 'currency',
-                                        }).of(c)}
-                                    </SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                </div>
+                <FamilyPeriodControls {...{ monthName, date, move, update, currency, overview }} />
             </div>
             {query.error ? (
                 failure(() => void query.refetch())
@@ -898,103 +827,7 @@ export function FamilyHome({
                             </p>
                         )}
                         <div className="divide-y divide-border dark:divide-white/[0.06]">
-                            {transactions.data.items.map(
-                                (
-                                    t: FamilyLedgerItem,
-                                    i: number,
-                                    rows: FamilyLedgerItem[],
-                                ) => {
-                                    const content = (
-                                        <>
-                                            <span className="size-9 rounded-full bg-muted flex shrink-0 items-center justify-center">
-                                                <Receipt className="size-4" />
-                                            </span>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-medium truncate">
-                                                    {t.description ||
-                                                        t.categoryName ||
-                                                        'Uncategorised'}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground flex gap-x-2 min-w-0">
-                                                    <span className="text-foreground/80">
-                                                        {t.spender?.isMe
-                                                            ? 'You'
-                                                            : (t.spender
-                                                                  ?.name ??
-                                                              'Unassigned')}
-                                                    </span>
-                                                    <span className="truncate">
-                                                        {t.place.kind ===
-                                                        'wallet'
-                                                            ? t.place.walletName
-                                                            : t.place
-                                                                  .accountName}
-                                                    </span>
-                                                </p>
-                                                {t.author &&
-                                                    t.author.memberId !==
-                                                        t.spender?.memberId && (
-                                                        <p className="text-xs text-muted-foreground truncate">
-                                                            Added by{' '}
-                                                            {t.author.name}
-                                                        </p>
-                                                    )}
-                                            </div>
-                                            <span
-                                                className={`pointer-events-none shrink-0 text-sm ${t.kind === 'income' ? 'text-emerald-700 dark:text-emerald-400' : ''}`}
-                                            >
-                                                {t.kind === 'expense'
-                                                    ? '−'
-                                                    : '+'}
-                                                <FamilyMoney
-                                                    amount={t.amount}
-                                                    currency={t.currencyCode}
-                                                />
-                                            </span>
-                                        </>
-                                    );
-                                    return (
-                                        <div key={t.id}>
-                                            {(i === 0 ||
-                                                rows[i - 1].date !==
-                                                    t.date) && (
-                                                <h3 className="px-3 pt-3 text-xs text-muted-foreground">
-                                                    {t.date}
-                                                </h3>
-                                            )}
-                                            {t.place.kind === 'wallet' ? (
-                                                <Link
-                                                    className={rowClass}
-                                                    to="/family/wallets/$walletId"
-                                                    params={{
-                                                        walletId:
-                                                            t.place.walletId,
-                                                    }}
-                                                >
-                                                    {content}
-                                                </Link>
-                                            ) : (
-                                                <Link
-                                                    className={rowClass}
-                                                    to="/spending"
-                                                    search={{
-                                                        month,
-                                                        member:
-                                                            t.spender
-                                                                ?.memberId ??
-                                                            undefined,
-                                                        category:
-                                                            t.categoryId ??
-                                                            'none',
-                                                    }}
-                                                >
-                                                    {content}
-                                                </Link>
-                                            )}
-                                        </div>
-                                    );
-                                },
-                            )}
+                            <FamilyLedgerRows items={transactions.data.items} />
                         </div>
                     </GlassCard>
                 )}

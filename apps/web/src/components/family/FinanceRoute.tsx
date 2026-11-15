@@ -1,3 +1,4 @@
+import { FamilySpending } from './FamilySpending';
 import { FamilyAccounts } from './FamilyAccounts';
 import { FamilyHome } from './FamilyHome';
 import type { ComponentType } from 'react';
@@ -42,6 +43,7 @@ export function FinanceRoute({
     if (!family) return null;
     if (title === 'Dashboard') return <FamilyHome family={family} />;
     if (title === 'Accounts') return <FamilyAccounts family={family} />;
+    if (title === 'Spending') return <FamilySpending family={family} />;
     const members = family.members
         .filter((member) => visibleFamilyMember(family.me, member))
         .sort(
