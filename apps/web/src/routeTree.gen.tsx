@@ -485,7 +485,7 @@ export const familyMemberRoute = createRoute({
     component: FamilyMemberPage,
     validateSearch: (search: Record<string, unknown>): { month?: string; currency?: string } => ({
         month: typeof search.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(search.month) ? search.month : undefined,
-        currency: typeof search.currency === 'string' ? search.currency : undefined,
+        currency: typeof search.currency === 'string' && /^[A-Z]{3}$/.test(search.currency) ? search.currency : undefined,
     }),
 });
 

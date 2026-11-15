@@ -96,7 +96,7 @@ export function FamilyMemberPage() {
     );
     const unavailable =
         [overview.error, finances.error, transactions.error].some(
-            (error) => error?.data?.code === 'NOT_FOUND',
+            (error) => error?.data?.code === 'NOT_FOUND' || error?.data?.code === 'FORBIDDEN',
         ) ||
         (summaryMember && !canOpenMember(summaryMember, summaryMember));
     if (unavailable)
