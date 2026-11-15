@@ -17,7 +17,7 @@ export function DemoPage() {
         void demo.start(role);
     }, [demo.ready, demo.isPersonal, availability.data, role, demo.start]);
     const unavailable = availability.isError || availability.data === false;
-    return <AuthLayout title={unavailable ? "Demo isn't available" : 'Explore Woolet'} subtitle={unavailable ? 'Sign in or create an account instead.' : `Opening the Martinez family as ${person.label}…`}>
+    return <AuthLayout title={unavailable ? "Demo isn't available" : 'Explore Woolet'} subtitle={unavailable ? 'Sign in or create an account instead.' : `Opening the demo family as ${person.label}…`}>
         <div className="space-y-4" aria-live="polite">
             {demo.isPersonal ? <>
                 <p className="text-sm text-muted-foreground">You're signed in to your own account. Open the demo in a separate session, or sign out to explore the sample family.</p>

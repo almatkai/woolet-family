@@ -80,11 +80,11 @@ export function DemoBar({ placement }: { placement: Placement }) {
             <section
                 aria-label="Demo mode"
                 aria-busy={busy}
-                title={`Shared sample family · Martinez. ${SHARED_NOTE}`}
+                title={`Shared demo. ${SHARED_NOTE}`}
                 className={cn(headerPillClass, 'min-w-0 pl-4 pr-1.5')}
             >
                 <span className="hidden truncate text-xs font-semibold tracking-wide text-muted-foreground xl:inline">
-                    Shared demo · Martinez
+                    Demo
                 </span>
                 <span className="sr-only">{SHARED_NOTE}</span>
                 {people(true)}
@@ -121,7 +121,7 @@ export function DemoBar({ placement }: { placement: Placement }) {
                 )}
             >
                 <div>
-                    <p className="text-muted-foreground">Shared sample family · Martinez</p>
+                    <p className="text-muted-foreground">Shared demo family</p>
                     <p className="text-xs text-muted-foreground">{SHARED_NOTE}</p>
                 </div>
                 <Button variant="ghost" size="sm" disabled={busy} className="ml-auto min-h-11" onClick={() => void demo.exit()}>
