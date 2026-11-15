@@ -171,7 +171,7 @@ export function FamilyJoinPage() {
                         <p className="mt-4 text-xs text-muted-foreground">
                             {data.role === 'child'
                                 ? "You'll get your own wallet, managed by your family. Your other accounts stay private."
-                                : "You'll see the family's shared wallets. Your personal accounts stay private."}
+                                : `Adults in ${familyName} see each other's accounts, spending, loans, investments and taxes. You'll still change only your own.`}
                         </p>
                         <div className="mt-6 flex flex-col gap-2">
                             <Button

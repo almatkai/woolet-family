@@ -58,10 +58,10 @@ const navGroups = [
         label: 'Overview',
         items: [
             { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+            { title: 'Family', url: '/family', icon: HeartHandshake },
             { title: 'Accounts', url: '/accounts', icon: Wallet },
             { title: 'Spending', url: '/spending', icon: Receipt },
             { title: 'Subscriptions', url: '/subscriptions', icon: CalendarClock },
-            { title: 'Family', url: '/family', icon: HeartHandshake },
         ],
     },
     {

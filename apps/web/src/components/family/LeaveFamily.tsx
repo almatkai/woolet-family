@@ -38,8 +38,7 @@ export function LeaveFamily({
                 </h2>
                 {!owner && (
                     <p className="text-xs text-muted-foreground">
-                        You'll lose access to family wallets. Your personal
-                        accounts aren't affected.
+                        You'll lose access to family wallets and to other members' finances. Your family will no longer see yours.
                     </p>
                 )}
                 {mutation.error && (
