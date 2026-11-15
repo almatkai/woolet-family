@@ -78,7 +78,7 @@ export function FamilyMemberPage() {
         month,
         currency: search.currency,
         memberId,
-    }, { enabled: memberAvailable, retry: false });
+    }, { enabled: memberAvailable, retry: false, keepPreviousData: true });
     const transactions = trpc.household.familyTransactions.useInfiniteQuery(
         { month, memberId },
         {
@@ -156,7 +156,7 @@ export function FamilyMemberPage() {
             />
         );
     const own = holdings?.members[0];
-    const currency = data?.displayCurrency ?? search.currency ?? 'KZT';
+    const currency = data?.displayCurrency ?? holdings?.displayCurrency ?? search.currency ?? 'USD';
     const date = new Date(`${month}-01T12:00:00`);
     const monthName = date.toLocaleDateString('en', { month: 'long' });
     const update = (patch: { month?: string; currency?: string }) => {

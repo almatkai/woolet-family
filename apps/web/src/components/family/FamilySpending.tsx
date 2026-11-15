@@ -45,7 +45,7 @@ export function FamilySpending({
         currency: search.currency,
         memberId: search.member,
         categoryId: search.category,
-    });
+    }, { keepPreviousData: true });
     const overview = query.data as HouseholdOverviewOutput | undefined;
     const rows = trpc.household.familyTransactions.useInfiniteQuery(
         {
@@ -58,9 +58,10 @@ export function FamilySpending({
         {
             getNextPageParam: (last: FamilyTransactionsOutput) =>
                 last.nextCursor ?? undefined,
+            keepPreviousData: true,
         },
     );
-    const currency = overview?.displayCurrency ?? search.currency ?? 'KZT';
+    const currency = overview?.displayCurrency ?? search.currency ?? 'USD';
     const move = (n: number) => {
         const next = new Date(date);
         next.setMonth(next.getMonth() + n);
