@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { and, eq, gte, lte, inArray, isNull } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../lib/trpc';
 import {
@@ -10,13 +10,10 @@ import {
     currencyBalances,
     accounts,
     banks,
-    categories,
 } from '../db/schema';
-import { taxProfileSchema, taxYearSchema, paymentSchema, type TaxProfile } from '../lib/tax/input';
-import { annualizationFactor, estimateTax } from '../lib/tax/estimate';
+import { taxProfileSchema, taxYearSchema, paymentSchema } from '../lib/tax/input';
+import { fromRow, transactionIncome, readTaxEstimate } from '../lib/tax/reads';
 import { states, getState } from '../lib/tax/states';
-import { CurrencyService } from '../services/currency';
-import type { Context } from '../lib/trpc';
 const yearInput = z.object({ taxYear: taxYearSchema });
 const datedYearInput = yearInput.extend({
     today: paymentSchema.shape.paidOn.optional(),
@@ -24,81 +21,6 @@ const datedYearInput = yearInput.extend({
 // Treat the supplied calendar day as UTC only inside the date-based calculator.
 const calculationDate = (today?: string) =>
     new Date(`${today ?? format(new Date(), 'yyyy-MM-dd')}T00:00:00Z`);
-const moneyFields = [
-    'wageIncome',
-    'selfEmploymentIncome',
-    'interestIncome',
-    'ordinaryDividends',
-    'qualifiedDividends',
-    'longTermCapitalGains',
-    'shortTermCapitalGains',
-    'otherIncome',
-    'preTaxContributions',
-    'iraDeduction',
-    'hsaDeduction',
-    'studentLoanInterest',
-    'tipsDeduction',
-    'overtimeDeduction',
-    'federalWithholdingYtd',
-    'stateWithholdingYtd',
-    'priorYearTax',
-    'priorYearAgi',
-    'stateEffectiveRate',
-] as const;
-function fromRow(row: typeof taxProfiles.$inferSelect): TaxProfile {
-    return taxProfileSchema.parse({
-        ...row,
-        ...Object.fromEntries(moneyFields.map((k) => [k, row[k] === null ? null : Number(row[k])])),
-    });
-}
-async function transactionIncome(
-    ctx: Pick<Context, 'db' | 'userId'> & { user: { testMode: boolean } },
-    taxYear: 2025 | 2026,
-    today: Date,
-) {
-    const rows = await ctx.db
-        .select({
-            amount: transactions.amount,
-            currency: currencyBalances.currencyCode,
-            category: categories.name,
-        })
-        .from(transactions)
-        .innerJoin(currencyBalances, eq(transactions.currencyBalanceId, currencyBalances.id))
-        .innerJoin(accounts, eq(currencyBalances.accountId, accounts.id))
-        .innerJoin(banks, eq(accounts.bankId, banks.id))
-        .innerJoin(categories, eq(transactions.categoryId, categories.id))
-        .where(
-            and(
-                eq(banks.userId, ctx.userId!),
-                eq(banks.isTest, ctx.user.testMode),
-                eq(transactions.type, 'income'),
-                eq(transactions.lifecycleStatus, 'active'),
-                isNull(transactions.parentTransactionId),
-                inArray(categories.name, ['Salary', 'Bonuses', 'Freelance Work']),
-                gte(transactions.date, `${taxYear}-01-01`),
-                lte(transactions.date, `${taxYear}-12-31`),
-                lte(transactions.date, today.toISOString().slice(0, 10)),
-            ),
-        );
-    let wageYtd = 0,
-        selfEmploymentYtd = 0;
-    // Resolve each currency once, using the app's cached conversion helper.
-    const rates = new Map<string, number>();
-    for (const row of rows) {
-        if (!rates.has(row.currency))
-            rates.set(row.currency, await CurrencyService.getRate(row.currency, 'USD'));
-        const amount = Number(row.amount) * rates.get(row.currency)!;
-        if (row.category === 'Freelance Work') selfEmploymentYtd += amount;
-        else wageYtd += amount;
-    }
-    const factor = annualizationFactor(taxYear, today);
-    return {
-        wageYtd,
-        selfEmploymentYtd,
-        wageProjected: wageYtd * factor,
-        selfEmploymentProjected: selfEmploymentYtd * factor,
-    };
-}
 export const taxRouter = router({
     getStates: protectedProcedure
         .input(z.object({ taxYear: taxYearSchema }).optional())
@@ -147,33 +69,7 @@ export const taxRouter = router({
         .input(datedYearInput)
         .query(({ ctx, input }) => transactionIncome(ctx, input.taxYear, calculationDate(input.today))),
     estimate: protectedProcedure.input(datedYearInput).query(async ({ ctx, input }) => {
-        const row = await ctx.db.query.taxProfiles.findFirst({
-            where: and(eq(taxProfiles.userId, ctx.userId), eq(taxProfiles.taxYear, input.taxYear)),
-        });
-        if (!row) return null;
-        const profile = fromRow(row),
-            today = calculationDate(input.today);
-        const derivedIncome = profile.useTransactionsForIncome
-            ? await transactionIncome(ctx, input.taxYear, today)
-            : null;
-        if (derivedIncome) {
-            profile.wageIncome = derivedIncome.wageProjected;
-            profile.selfEmploymentIncome = derivedIncome.selfEmploymentProjected;
-        }
-        const payments = await ctx.db.query.taxEstimatedPayments.findMany({
-            where: and(
-                eq(taxEstimatedPayments.userId, ctx.userId),
-                eq(taxEstimatedPayments.taxYear, input.taxYear),
-            ),
-        });
-        return {
-            ...estimateTax(
-                profile,
-                payments.map((p) => ({ ...p, amount: Number(p.amount) })),
-                today,
-            ),
-            derivedIncome,
-        };
+        return readTaxEstimate(ctx, input.taxYear, calculationDate(input.today));
     }),
     listEstimatedPayments: protectedProcedure
         .input(yearInput)
