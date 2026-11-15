@@ -46,6 +46,8 @@ export function FamilyDeposits({
                     <FamilySectionTotal
                         label="Family deposits balance"
                         totals={totals(data.members)}
+                        converted={data.summary.depositsConverted}
+                        unconvertedCurrencies={data.unconvertedCurrencies}
                         currency={data.displayCurrency}
                     />
                     {!data.members.some((member) => member.deposits.length) && (

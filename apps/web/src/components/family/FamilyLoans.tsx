@@ -30,7 +30,7 @@ export function FamilyLoans<T extends Loan>({
 }: {
     family: NonNullable<HouseholdOverview>;
     title: string;
-    singular: string;
+    singular: 'credit' | 'mortgage';
     rows: (member: Member) => T[];
     detail: (item: T) => string;
 }) {
@@ -63,11 +63,15 @@ export function FamilyLoans<T extends Loan>({
                     <FamilySectionTotal
                         label={`Family ${title.toLowerCase()} remaining`}
                         totals={totals(data.members, 'remaining')}
+                        converted={singular === 'credit' ? data.summary.creditsRemainingConverted : data.summary.mortgagesRemainingConverted}
+                        unconvertedCurrencies={data.unconvertedCurrencies}
                         currency={data.displayCurrency}
                     />
                     <FamilySectionTotal
                         label="Monthly payments"
                         totals={totals(data.members, 'monthlyPayment')}
+                        converted={singular === 'credit' ? data.summary.creditsMonthlyConverted : data.summary.mortgagesMonthlyConverted}
+                        unconvertedCurrencies={data.unconvertedCurrencies}
                         currency={data.displayCurrency}
                     />
                     {!data.members.some((member) => rows(member).length) && (

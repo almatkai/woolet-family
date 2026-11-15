@@ -82,6 +82,8 @@ export const householdFamilyFinanceProcedures = {
                 });
             }
             const balances = amounts(), owes = amounts(), owed = amounts(), monthlyPayments = amounts();
+            const creditsMonthly = amounts(), creditsRemaining = amounts(), mortgagesMonthly = amounts(), mortgagesRemaining = amounts();
+            const deposits = amounts(), subscriptionsMonthly = amounts();
             let accountsCount = 0, creditsCount = 0, mortgagesCount = 0, depositsCount = 0, subscriptionsCount = 0;
             for (const member of members) {
                 accountsCount += member.accounts.length; creditsCount += member.credits.length; mortgagesCount += member.mortgages.length; depositsCount += member.deposits.length;
@@ -89,9 +91,21 @@ export const householdFamilyFinanceProcedures = {
                 for (const d of member.debts) {
                     if (!d.counterpartyMemberId) (d.type === 'i_owe' ? owes : owed).add(d.remaining, d.currencyCode);
                 }
-                for (const c of [...member.credits, ...member.mortgages]) monthlyPayments.add(c.monthlyPayment, c.currency);
+                for (const credit of member.credits) {
+                    creditsMonthly.add(credit.monthlyPayment, credit.currency);
+                    creditsRemaining.add(credit.remaining, credit.currency);
+                    monthlyPayments.add(credit.monthlyPayment, credit.currency);
+                }
+                for (const mortgage of member.mortgages) {
+                    mortgagesMonthly.add(mortgage.monthlyPayment, mortgage.currency);
+                    mortgagesRemaining.add(mortgage.remaining, mortgage.currency);
+                    monthlyPayments.add(mortgage.monthlyPayment, mortgage.currency);
+                }
+                for (const deposit of member.deposits) deposits.add(deposit.balance, deposit.currency);
                 for (const sub of member.subscriptions) if (!sub.linkedEntityType) {
-                    monthlyPayments.add(sub.monthlyAmount, sub.currency); subscriptionsCount++;
+                    monthlyPayments.add(sub.monthlyAmount, sub.currency);
+                    subscriptionsMonthly.add(sub.monthlyAmount, sub.currency);
+                    subscriptionsCount++;
                 }
             }
             const sumConverted = (rows: CurrencyAmount[]) => fromCents(rows.reduce((sum, r) => sum + toCents(convert(r.amount, r.currencyCode) ?? '0'), 0));
@@ -99,6 +113,9 @@ export const householdFamilyFinanceProcedures = {
                 balances: balances.rows(), balancesConverted: sumConverted(balances.rows()), accountsCount,
                 owes: owes.rows(), owesConverted: sumConverted(owes.rows()), owed: owed.rows(), owedConverted: sumConverted(owed.rows()),
                 monthlyPayments: monthlyPayments.rows(), monthlyPaymentsConverted: sumConverted(monthlyPayments.rows()),
+                creditsMonthlyConverted: sumConverted(creditsMonthly.rows()), creditsRemainingConverted: sumConverted(creditsRemaining.rows()),
+                mortgagesMonthlyConverted: sumConverted(mortgagesMonthly.rows()), mortgagesRemainingConverted: sumConverted(mortgagesRemaining.rows()),
+                depositsConverted: sumConverted(deposits.rows()), subscriptionsMonthlyConverted: sumConverted(subscriptionsMonthly.rows()),
                 creditsCount, mortgagesCount, depositsCount, subscriptionsCount, investmentsValueConverted: sumConverted(members.flatMap(m => m.investments?.value ?? [])),
             };
             return { displayCurrency, unconvertedCurrencies: [...missing].sort(), members, summary, internalDebts: internalDebtsOf(members) };

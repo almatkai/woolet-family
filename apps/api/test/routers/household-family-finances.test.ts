@@ -62,7 +62,7 @@ function setup(role = 'owner', guardian = false) {
     };
     ratesSpy?.mockRestore();
     ratesSpy = spyOn(currencyExchangeService, 'getExchangeRates').mockResolvedValue({ USD: 1, EUR: 2, GBP: 4 });
-    return { caller: householdRouter.createCaller(createMockContext({ userId: 'viewer', user: { testMode: true } as any, db })), reads, all, debts, subscriptions, debt, holdings, prices };
+    return { caller: householdRouter.createCaller(createMockContext({ userId: 'viewer', user: { testMode: true } as any, db })), reads, all, debts, subscriptions, debt, holdings, prices, db };
 }
 test('family finances returns curated item ids, member order and converted summaries', async () => {
     const { caller } = setup();
@@ -74,7 +74,9 @@ test('family finances returns curated item ids, member order and converted summa
     expect(result.members[0].deposits[0]).toMatchObject({ id: uuid(33), interestRate: '5.00' });
     expect(result.summary).toEqual({ balances: [{ currencyCode: 'EUR', amount: '200.00' }, { currencyCode: 'GBP', amount: '100.00' }, { currencyCode: 'USD', amount: '100.00' }],
         balancesConverted: '225.00', accountsCount: 3, owes: [{ currencyCode: 'USD', amount: '1099.00' }], owesConverted: '1099.00', owed: [{ currencyCode: 'USD', amount: '60.00' }], owedConverted: '60.00',
-        monthlyPayments: [{ currencyCode: 'USD', amount: '222.42' }], monthlyPaymentsConverted: '222.42', creditsCount: 1, mortgagesCount: 1, depositsCount: 1, subscriptionsCount: 4, investmentsValueConverted: '0.00' });
+        monthlyPayments: [{ currencyCode: 'USD', amount: '222.42' }], monthlyPaymentsConverted: '222.42',
+        creditsMonthlyConverted: '10.00', creditsRemainingConverted: '500.00', mortgagesMonthlyConverted: '100.00', mortgagesRemainingConverted: '5000.00',
+        depositsConverted: '500.00', subscriptionsMonthlyConverted: '112.42', creditsCount: 1, mortgagesCount: 1, depositsCount: 1, subscriptionsCount: 4, investmentsValueConverted: '0.00' });
     expect(result.unconvertedCurrencies).toEqual([]); expect(ratesSpy).toHaveBeenCalledTimes(1);
 });
 test('internal linked-user debts appear once and are excluded from owes and owed', async () => {
@@ -156,4 +158,44 @@ test('B8 rounds fractional holding values only after multiplying full precision'
     holdings.push({ id: 'tiny', userId: 'viewer', stockId: 'tiny', quantity: '0.00500000', averageCostBasis: '1.00000000', stock: { userId: 'viewer', ticker: 'TINY', currency: 'USD' } });
     prices.set('tiny', '1.00000000');
     expect((await caller.familyFinances({ memberId: viewerId })).summary.investmentsValueConverted).toBe('0.01');
+});
+
+test('section totals convert mixed currencies and exclude loan-linked subscriptions', async () => {
+    const { caller, db, subscriptions } = setup('adult');
+    for (const [table, currency] of [['credits', 'EUR'], ['mortgages', 'GBP'], ['deposits', 'EUR']]) {
+        const read = db.query[table].findMany;
+        db.query[table].findMany = async (options: unknown) => (await read(options)).map((row: object) => ({ ...row, currency }));
+    }
+    subscriptions.find(sub => sub.id === uuid(22))!.currency = 'EUR';
+    subscriptions.find(sub => sub.id === uuid(23))!.currency = 'GBP';
+    const usd = await caller.familyFinances({});
+    expect(usd.summary).toMatchObject({
+        creditsMonthlyConverted: '5.00', creditsRemainingConverted: '250.00',
+        mortgagesMonthlyConverted: '25.00', mortgagesRemainingConverted: '1250.00',
+        depositsConverted: '250.00', subscriptionsMonthlyConverted: '94.92', monthlyPaymentsConverted: '124.92',
+    });
+    expect(usd.unconvertedCurrencies).toEqual([]);
+    ratesSpy.mockResolvedValue({ EUR: 1, USD: 0.5, GBP: 2 });
+    const eur = await caller.familyFinances({ currency: 'EUR' });
+    expect(eur.summary).toMatchObject({
+        creditsMonthlyConverted: '10.00', creditsRemainingConverted: '500.00',
+        mortgagesMonthlyConverted: '50.00', mortgagesRemainingConverted: '2500.00',
+        depositsConverted: '500.00', subscriptionsMonthlyConverted: '189.84',
+    });
+    ratesSpy.mockResolvedValue({ USD: 1 });
+    const missing = await caller.familyFinances({});
+    expect(missing.summary).toMatchObject({
+        creditsMonthlyConverted: '0.00', creditsRemainingConverted: '0.00',
+        mortgagesMonthlyConverted: '0.00', mortgagesRemainingConverted: '0.00',
+        depositsConverted: '0.00', subscriptionsMonthlyConverted: '82.42',
+    });
+    expect(missing.unconvertedCurrencies).toEqual(['EUR', 'GBP']);
+    // The raw amounts remain available when a converted amount cannot be shown.
+    expect(missing.members[0].credits[0].remaining).toBe('500.00');
+    const member = await caller.familyFinances({ memberId: adultId });
+    expect(member.summary).toMatchObject({
+        creditsMonthlyConverted: '0.00', creditsRemainingConverted: '0.00',
+        mortgagesMonthlyConverted: '0.00', mortgagesRemainingConverted: '0.00',
+        depositsConverted: '0.00', subscriptionsMonthlyConverted: '0.00',
+    });
 });

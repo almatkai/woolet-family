@@ -66,7 +66,7 @@ export function FamilyFinancesNav({
 }) {
     const finances = financesQuery.error ? undefined : loadedFinances;
     const financeMoney = (amount: string | number) => finances ? (
-        <FamilyMoney amount={amount} currency={finances.displayCurrency} />
+        <FamilyMoney amount={amount} currency={finances.displayCurrency} abbreviate />
     ) : '—';
     return (
         <section className="space-y-3">
@@ -124,7 +124,7 @@ export function FamilyFinancesNav({
                                 Landmark,
                                 finances &&
                                     (finances.summary.creditsCount
-                                        ? `${finances.summary.creditsCount} active`
+                                        ? <>{finances.summary.creditsCount} active, ≈ {financeMoney(finances.summary.creditsMonthlyConverted)} a month</>
                                         : 'No credits'),
                             ],
                             [
@@ -133,7 +133,7 @@ export function FamilyFinancesNav({
                                 House,
                                 finances &&
                                     (finances.summary.mortgagesCount
-                                        ? `${finances.summary.mortgagesCount} active`
+                                        ? <>{finances.summary.mortgagesCount} active, ≈ {financeMoney(finances.summary.mortgagesMonthlyConverted)} a month</>
                                         : 'No mortgages'),
                             ],
                             [
@@ -142,7 +142,7 @@ export function FamilyFinancesNav({
                                 PiggyBank,
                                 finances &&
                                     (finances.summary.depositsCount
-                                        ? `${finances.summary.depositsCount} ${finances.summary.depositsCount === 1 ? 'deposit' : 'deposits'}`
+                                        ? <>≈ {financeMoney(finances.summary.depositsConverted)}</>
                                         : 'No deposits'),
                             ],
                             [
@@ -151,7 +151,7 @@ export function FamilyFinancesNav({
                                 Repeat,
                                 finances &&
                                     (finances.summary.subscriptionsCount
-                                        ? `${finances.summary.subscriptionsCount} active`
+                                        ? <>{finances.summary.subscriptionsCount} active, ≈ {financeMoney(finances.summary.subscriptionsMonthlyConverted)} a month</>
                                         : 'No subscriptions'),
                             ],
                             [

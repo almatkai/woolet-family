@@ -316,6 +316,12 @@ export type FamilyFinances = {
         owedConverted: string;
         monthlyPayments: CurrencyAmount[];
         monthlyPaymentsConverted: string;
+        creditsMonthlyConverted: string;
+        creditsRemainingConverted: string;
+        mortgagesMonthlyConverted: string;
+        mortgagesRemainingConverted: string;
+        depositsConverted: string;
+        subscriptionsMonthlyConverted: string;
         creditsCount: number;
         mortgagesCount: number;
         depositsCount: number;
@@ -544,6 +550,12 @@ export type FamilyFinancesOutput = {
         owedConverted: string;
         monthlyPayments: CurrencyAmount[];
         monthlyPaymentsConverted: string;
+        creditsMonthlyConverted: string;
+        creditsRemainingConverted: string;
+        mortgagesMonthlyConverted: string;
+        mortgagesRemainingConverted: string;
+        depositsConverted: string;
+        subscriptionsMonthlyConverted: string;
         creditsCount: number;
         mortgagesCount: number;
         depositsCount: number;
