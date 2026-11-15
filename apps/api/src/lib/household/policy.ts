@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import type { db as database } from '../../db';
 import { householdMembers, households } from '../../db/schema/households';
 
-export type Membership = Pick<typeof householdMembers.$inferSelect, 'id' | 'householdId' | 'userId' | 'role' | 'isGuardian' | 'showBalanceToChildren'>;
+export type Membership = Pick<typeof householdMembers.$inferSelect, 'id' | 'householdId' | 'userId' | 'role' | 'isGuardian' | 'showBalanceToChildren' | 'status'>;
 export type WalletRef = { id: string; householdId: string; kind: 'shared' | 'child'; childMemberId: string | null; archivedAt: Date | null };
 export async function getMembership(db: Pick<typeof database, 'select'>, userId: string) {
     const [row] = await db.select({ membership: householdMembers, household: households }).from(householdMembers)
@@ -28,3 +28,11 @@ export function assertWalletAccess(m: Membership, w: WalletRef, action: 'view' |
     const allowed = action === 'view' ? canViewWallet(m, w) : action === 'manage' ? canManageChildWallet(m, w) : canWriteWallet(m, w, action);
     if (!allowed) throw new TRPCError({ code: 'FORBIDDEN' });
 }
+
+export function canViewMemberFinances(viewer: Membership, target: Membership): boolean {
+    if (viewer.householdId !== target.householdId || viewer.status !== 'active' || target.status !== 'active') return false;
+    if (viewer.id === target.id) return true;
+    if (viewer.role === 'child') return false;
+    return target.role !== 'child' || guardian(viewer);
+}
+export const canEditFamilyBudget = (m: Membership): boolean => guardian(m);
