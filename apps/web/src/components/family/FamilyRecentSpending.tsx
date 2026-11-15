@@ -95,7 +95,6 @@ export function FamilyRecentSpending({
             <div className="flex items-center justify-between">
                 <h2 className={sectionLabel}>Recent spending</h2>
                 <Button asChild variant="ghost" size="sm">
-                    {' '}
                     <Link
                         to="/spending"
                         search={{
