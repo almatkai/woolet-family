@@ -5,6 +5,7 @@ import { investingCache } from '../lib/investing-cache';
 import { redis } from '../lib/redis';
 import { invalidateUserFinancialCaches } from '../lib/cache-invalidation';
 import { prepareFamilyForUserDeletion } from '../lib/household/membership-cleanup';
+import { getDemoRole } from '../lib/demo';
 import {
     users,
     banks,
@@ -53,7 +54,7 @@ const USERNAME_SCHEMA = z.string()
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Family tables belong to multiple members, so personal export/import never transfers them.
-const FAMILY_TABLES = new Set(['householdBudgets', 'household_budgets', 'households', 'householdMembers', 'householdInvitations', 'familyWallets', 'familyWalletTransactions', 'familyBudgetLimits', 'household_members', 'household_invitations', 'family_wallets', 'family_wallet_transactions', 'family_budget_limits']);
+const FAMILY_TABLES = new Set(['householdBudgets', 'household_budgets', 'households', 'householdMembers', 'householdInvitations', 'familyWallets', 'familyWalletTransactions', 'familyBudgetLimits', 'familyPurchaseProposals', 'household_members', 'household_invitations', 'family_wallets', 'family_wallet_transactions', 'family_budget_limits', 'family_purchase_proposals']);
 // Valid table names for import
 const VALID_TABLES = [
     'banks', 'accounts', 'currencyBalances', 'categories', 'transactions',
@@ -207,7 +208,7 @@ export const userRouter = router({
             where: eq(users.id, ctx.userId),
         });
 
-        return user;
+        return user ? { ...user, isDemo: Boolean(getDemoRole(ctx.userId)), demoRole: getDemoRole(ctx.userId) } : user;
     }),
 
     isAdmin: protectedProcedure.query(async ({ ctx }) => {

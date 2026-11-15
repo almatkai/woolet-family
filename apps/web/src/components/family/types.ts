@@ -187,7 +187,9 @@ export type LimitViolation = {
 
 /** `household.addTransaction` */
 export type AddTransactionResult = {
-    transaction: { id: string };
+    transaction: { id: string } | null;
+    approvalRequired?: boolean;
+    proposal?: { id: string } | null;
     balance: string;
     limitWarnings: LimitViolation[];
 };

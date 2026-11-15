@@ -1,6 +1,8 @@
 import { FamilyMemberPage } from './routes/family/member';
 import { FinanceRoute } from '@/components/family/FinanceRoute';
 import { FamilyPage } from './routes/family';
+import { DemoPage } from './routes/demo';
+import { DemoBar } from './components/DemoBar';
 import { FamilyJoinPage } from './routes/family/join';
 import { FamilyWalletPage } from './routes/family/wallet';
 import {
@@ -100,10 +102,10 @@ function RootLayout() {
     const { isSignedIn, isLoaded } = useAuth();
     const location = useLocation();
     const isSettingsRoute = location.pathname.startsWith('/settings');
-    const isAuthRoute =
-        location.pathname.startsWith('/login') ||
-        location.pathname.startsWith('/register') ||
-        location.pathname.startsWith('/sso-callback');
+    const isAuthRoute = location.pathname.startsWith('/login')
+        || location.pathname.startsWith('/register')
+        || location.pathname.startsWith('/sso-callback')
+        || location.pathname === '/demo';
     const isAdminRoute = location.pathname.startsWith('/admin');
     const isPublicRoute = isAuthRoute;
 
@@ -217,6 +219,7 @@ function RootLayout() {
                                     : 'max-[470px]:pb-[calc(6rem+env(safe-area-inset-bottom))]'),
                         )}
                     >
+                        {!isAuthRoute && <DemoBar />}
                         <Outlet />
                     </main>
                 </SidebarInset>
@@ -495,6 +498,7 @@ export const familyWalletRoute = createRoute({
     component: FamilyWalletPage,
 });
 export const routeTree = rootRoute.addChildren([
+    createRoute({ getParentRoute: () => rootRoute, path: '/demo', component: DemoPage }),
     familyRoute,
     familyJoinRoute,
     familyWalletRoute,

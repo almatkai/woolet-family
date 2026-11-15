@@ -6,6 +6,7 @@ import superjson from 'superjson';
 import { trpc } from '../../src/lib/trpc';
 import { FamilyTransactionSheet } from '../../src/components/family/FamilyTransactionSheet';
 import { LimitSheet } from '../../src/components/family/LimitSheet';
+import { PurchaseApprovals } from '../../src/components/family/PurchaseApprovals';
 import type { FamilyLimit, FamilyWallet } from '../../src/components/family/types';
 import '../../src/index.css';
 
@@ -26,7 +27,7 @@ const limits: FamilyLimit[] = [{
 }];
 
 function Fixture() {
-    const [form, setForm] = useState<'shared' | 'child' | 'expense' | 'limits' | null>(null);
+    const [form, setForm] = useState<'shared' | 'child' | 'expense' | 'limits' | 'approval' | 'proposals' | null>(null);
     return (
         <trpc.Provider client={client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
@@ -34,17 +35,20 @@ function Fixture() {
                 <button onClick={() => setForm('child')}>Transfer from child</button>
                 <button onClick={() => setForm('expense')}>Child expense</button>
                 <button onClick={() => setForm('limits')}>Edit limits</button>
+                <button onClick={() => setForm('approval')}>Shared purchase</button>
+                <button onClick={() => setForm('proposals')}>Purchase proposals</button>
+                {form === 'proposals' && <PurchaseApprovals wallets={[{ ...shared, balance: '2020.00' }]} onNewPurchase={() => setForm('approval')} />}
                 {form === 'limits' ? (
                     <LimitSheet wallet={children[0]} limits={limits} onClose={() => setForm(null)} />
-                ) : form && (
+                ) : form && form !== 'proposals' && (
                     <FamilyTransactionSheet
                         key={form}
                         open
-                        mode={form === 'expense' ? 'child' : 'transfer'}
+                        mode={form === 'expense' ? 'child' : form === 'approval' ? 'add' : 'transfer'}
                         wallets={form === 'expense'
                             ? children.map((wallet) => ({ ...wallet, canManage: false }))
-                            : [shared, ...children]}
-                        presetWalletId={form === 'expense' ? undefined : form === 'shared' ? shared.id : children[0].id}
+                            : form === 'approval' ? [{ ...shared, balance: '2020.00' }] : [shared, ...children]}
+                        presetWalletId={form === 'expense' ? undefined : form === 'shared' || form === 'approval' ? shared.id : children[0].id}
                         onOpenChange={(open) => { if (!open) setForm(null); }}
                     />
                 )}

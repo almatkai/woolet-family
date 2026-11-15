@@ -1,5 +1,5 @@
 {
-  "id": "5e74bdd9-fe4c-40f3-893f-2424c3a4aff4",
+  "id": "7b8873d5-6121-458e-b421-04d8487f23a4",
   "prevId": "f0ce2c42-bc78-4f1f-b527-fd42dab39089",
   "version": "7",
   "dialect": "postgresql",
@@ -161,6 +161,287 @@
         "family_limit_positive": {
           "name": "family_limit_positive",
           "value": "\"family_budget_limits\".\"amount\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.family_purchase_proposals": {
+      "name": "family_purchase_proposals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "household_id": {
+          "name": "household_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "wallet_id": {
+          "name": "wallet_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proposer_user_id": {
+          "name": "proposer_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_actor_user_id": {
+          "name": "last_actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "awaiting_user_id": {
+          "name": "awaiting_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "original_amount": {
+          "name": "original_amount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "family_purchase_proposal_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "decided_by_user_id": {
+          "name": "decided_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timeline": {
+          "name": "timeline",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "family_purchase_proposals_household_status_idx": {
+          "name": "family_purchase_proposals_household_status_idx",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "family_purchase_proposals_transaction_unique": {
+          "name": "family_purchase_proposals_transaction_unique",
+          "columns": [
+            {
+              "expression": "transaction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"family_purchase_proposals\".\"transaction_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "family_purchase_proposals_household_id_households_id_fk": {
+          "name": "family_purchase_proposals_household_id_households_id_fk",
+          "tableFrom": "family_purchase_proposals",
+          "tableTo": "households",
+          "columnsFrom": [
+            "household_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "family_purchase_proposals_wallet_id_family_wallets_id_fk": {
+          "name": "family_purchase_proposals_wallet_id_family_wallets_id_fk",
+          "tableFrom": "family_purchase_proposals",
+          "tableTo": "family_wallets",
+          "columnsFrom": [
+            "wallet_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "family_purchase_proposals_proposer_user_id_users_id_fk": {
+          "name": "family_purchase_proposals_proposer_user_id_users_id_fk",
+          "tableFrom": "family_purchase_proposals",
+          "tableTo": "users",
+          "columnsFrom": [
+            "proposer_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "family_purchase_proposals_last_actor_user_id_users_id_fk": {
+          "name": "family_purchase_proposals_last_actor_user_id_users_id_fk",
+          "tableFrom": "family_purchase_proposals",
+          "tableTo": "users",
+          "columnsFrom": [
+            "last_actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "family_purchase_proposals_awaiting_user_id_users_id_fk": {
+          "name": "family_purchase_proposals_awaiting_user_id_users_id_fk",
+          "tableFrom": "family_purchase_proposals",
+          "tableTo": "users",
+          "columnsFrom": [
+            "awaiting_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "family_purchase_proposals_category_id_categories_id_fk": {
+          "name": "family_purchase_proposals_category_id_categories_id_fk",
+          "tableFrom": "family_purchase_proposals",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "family_purchase_proposals_decided_by_user_id_users_id_fk": {
+          "name": "family_purchase_proposals_decided_by_user_id_users_id_fk",
+          "tableFrom": "family_purchase_proposals",
+          "tableTo": "users",
+          "columnsFrom": [
+            "decided_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "family_purchase_proposals_transaction_id_family_wallet_transactions_id_fk": {
+          "name": "family_purchase_proposals_transaction_id_family_wallet_transactions_id_fk",
+          "tableFrom": "family_purchase_proposals",
+          "tableTo": "family_wallet_transactions",
+          "columnsFrom": [
+            "transaction_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "family_purchase_proposal_positive": {
+          "name": "family_purchase_proposal_positive",
+          "value": "\"family_purchase_proposals\".\"amount\" > 0 AND \"family_purchase_proposals\".\"original_amount\" > 0"
         }
       },
       "isRLSEnabled": false
@@ -446,167 +727,6 @@
         "family_wallet_child_member_check": {
           "name": "family_wallet_child_member_check",
           "value": "(\"family_wallets\".\"kind\" = 'shared' AND \"family_wallets\".\"child_member_id\" IS NULL) OR (\"family_wallets\".\"kind\" = 'child' AND (\"family_wallets\".\"child_member_id\" IS NOT NULL OR \"family_wallets\".\"archived_at\" IS NOT NULL))"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.household_budgets": {
-      "name": "household_budgets",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "household_id": {
-          "name": "household_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "category_id": {
-          "name": "category_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "currency_code": {
-          "name": "currency_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount": {
-          "name": "amount",
-          "type": "numeric(14, 2)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_by_user_id": {
-          "name": "updated_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "household_budgets_total_unique": {
-          "name": "household_budgets_total_unique",
-          "columns": [
-            {
-              "expression": "household_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"household_budgets\".\"category_id\" IS NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "household_budgets_category_unique": {
-          "name": "household_budgets_category_unique",
-          "columns": [
-            {
-              "expression": "household_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "category_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"household_budgets\".\"category_id\" IS NOT NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "household_budgets_household_id_households_id_fk": {
-          "name": "household_budgets_household_id_households_id_fk",
-          "tableFrom": "household_budgets",
-          "tableTo": "households",
-          "columnsFrom": [
-            "household_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "household_budgets_category_id_categories_id_fk": {
-          "name": "household_budgets_category_id_categories_id_fk",
-          "tableFrom": "household_budgets",
-          "tableTo": "categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "household_budgets_currency_code_currencies_code_fk": {
-          "name": "household_budgets_currency_code_currencies_code_fk",
-          "tableFrom": "household_budgets",
-          "tableTo": "currencies",
-          "columnsFrom": [
-            "currency_code"
-          ],
-          "columnsTo": [
-            "code"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "household_budgets_updated_by_user_id_users_id_fk": {
-          "name": "household_budgets_updated_by_user_id_users_id_fk",
-          "tableFrom": "household_budgets",
-          "tableTo": "users",
-          "columnsFrom": [
-            "updated_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "household_budget_positive": {
-          "name": "household_budget_positive",
-          "value": "\"household_budgets\".\"amount\" > 0"
         }
       },
       "isRLSEnabled": false
@@ -917,6 +1037,25 @@
           "notNull": true,
           "default": false
         },
+        "shared_purchase_limit": {
+          "name": "shared_purchase_limit",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'1000.00'"
+        },
+        "shared_purchase_limit_updated_by_user_id": {
+          "name": "shared_purchase_limit_updated_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shared_purchase_limit_updated_at": {
+          "name": "shared_purchase_limit_updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -946,12 +1085,30 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "households_shared_purchase_limit_updated_by_user_id_users_id_fk": {
+          "name": "households_shared_purchase_limit_updated_by_user_id_users_id_fk",
+          "tableFrom": "households",
+          "tableTo": "users",
+          "columnsFrom": [
+            "shared_purchase_limit_updated_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "household_shared_purchase_limit_nonnegative": {
+          "name": "household_shared_purchase_limit_nonnegative",
+          "value": "\"households\".\"shared_purchase_limit\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.users": {
@@ -2772,7 +2929,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "default": "'📱'"
+          "default": "'\ud83d\udcf1'"
         },
         "color": {
           "name": "color",
@@ -5919,6 +6076,16 @@
       "values": [
         "weekly",
         "monthly"
+      ]
+    },
+    "public.family_purchase_proposal_status": {
+      "name": "family_purchase_proposal_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "countered",
+        "approved",
+        "declined"
       ]
     },
     "public.family_transaction_type": {

@@ -4,6 +4,7 @@ import { SignedIn, SignedOut } from '@clerk/clerk-react';
 import { Navigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import posthog from 'posthog-js';
+import { DemoEntry } from '../components/DemoEntry';
 
 export function LoginPage() {
     useEffect(() => {
@@ -22,7 +23,7 @@ export function LoginPage() {
 
             {/* Only show the sign-in form to signed-out users */}
             <SignedOut>
-                <CustomSignInForm />
+                <DemoEntry><CustomSignInForm /></DemoEntry>
             </SignedOut>
         </AuthLayout>
     );

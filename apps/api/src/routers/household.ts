@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
+import { householdDisplayName } from '../lib/household/display-name';
 import { and, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { protectedProcedure, router } from '../lib/trpc';
@@ -16,6 +17,7 @@ import { householdFamilyTaxProcedures } from './household-family-tax';
 import { householdFamilyFinanceProcedures } from './household-family-finances';
 import { householdFamilyTransactionProcedures } from './household-family-transactions';
 import { householdWalletQueries } from './household-wallet-queries';
+import { householdPurchaseProcedures } from './household-purchases';
 
 type DB = typeof database;
 const name = z.string().trim().min(1).max(60);
@@ -55,13 +57,14 @@ export const householdRouter = router({
     ...householdBudgetProcedures,
     ...householdWalletProcedures,
     ...householdWalletQueries,
+    ...householdPurchaseProcedures,
     get: protectedProcedure.query(async ({ ctx }) => {
         const m = await getMembership(ctx.db, ctx.userId);
         if (!m) return null;
         const rows = await ctx.db.select({ member: members, name: users.name, email: users.email }).from(members).innerJoin(users, eq(users.id, members.userId)).where(and(eq(members.householdId, m.householdId), eq(members.status, 'active')));
         const pendingInvites = await ctx.db.query.householdInvitations.findMany({ where: pending(m.householdId) });
         const { household, ...me } = m;
-        return { household, me: { ...me, canManageMembers: canManageMembers(m), canEditSettings: canEditHouseholdSettings(m) }, members: rows.map(({ member: r, name, email }) => ({ id: r.id, userId: r.userId, name: name?.trim() || email.split('@')[0], ...(m.role !== 'child' ? { email } : {}), role: r.role, isGuardian: r.isGuardian, showBalanceToChildren: r.showBalanceToChildren, joinedAt: r.joinedAt })), activeMembers: rows.length, pendingInvites: pendingInvites.length, maxMembers: MAX_HOUSEHOLD_MEMBERS };
+        return { household, me: { ...me, canManageMembers: canManageMembers(m), canEditSettings: canEditHouseholdSettings(m) }, members: rows.map(({ member: r, name, email }) => ({ id: r.id, userId: r.userId, name: householdDisplayName(name, email), ...(m.role !== 'child' ? { email } : {}), role: r.role, isGuardian: r.isGuardian, showBalanceToChildren: r.showBalanceToChildren, joinedAt: r.joinedAt })), activeMembers: rows.length, pendingInvites: pendingInvites.length, maxMembers: MAX_HOUSEHOLD_MEMBERS };
     }),
     invitations: protectedProcedure.query(async ({ ctx }) => {
         const m = await membership(ctx.db, ctx.userId, true);
@@ -71,7 +74,7 @@ export const householdRouter = router({
         const s = await invitationState(ctx.db, ctx.userId, input.token);
         if (!s.i) return { canAccept: false, reason: 'not_found' as const };
         const inviter = s.i.invitedByUserId ? await ctx.db.query.users.findFirst({ where: eq(users.id, s.i.invitedByUserId) }) : null;
-        return { householdName: s.household.name, inviterName: inviter?.name?.trim() || inviter?.email.split('@')[0] || 'Family owner', role: s.i.role, isGuardian: s.i.isGuardian, expiresAt: s.i.expiresAt, canAccept: !s.reason, ...(s.reason ? { reason: s.reason } : {}), ...(s.reason === 'wrong_email' ? { invitedEmail: s.i.emailNormalized.replace(/^(.).*(@.*)$/, '$1***$2'), callerEmail: s.email } : {}), ...(s.reason === 'already_in_family' ? { currentFamilyName: s.m?.household.name } : {}) };
+        return { householdName: s.household.name, inviterName: householdDisplayName(inviter?.name, inviter?.email), role: s.i.role, isGuardian: s.i.isGuardian, expiresAt: s.i.expiresAt, canAccept: !s.reason, ...(s.reason ? { reason: s.reason } : {}), ...(s.reason === 'wrong_email' ? { invitedEmail: s.i.emailNormalized.replace(/^(.).*(@.*)$/, '$1***$2'), callerEmail: s.email } : {}), ...(s.reason === 'already_in_family' ? { currentFamilyName: s.m?.household.name } : {}) };
     }),
     create: protectedProcedure.input(z.object({ name })).mutation(async ({ ctx, input }) => ctx.db.transaction(async tx => {
         const db = tx as unknown as DB;

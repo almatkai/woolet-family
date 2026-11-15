@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server';
+import { householdDisplayName } from '../lib/household/display-name';
 import { and, eq, isNull, inArray, gte, lte, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { protectedProcedure } from '../lib/trpc';
@@ -49,7 +50,7 @@ export const householdWalletQueries = {
             const adults = await ctx.db.select({ memberId: M.id, name: users.name, email: users.email, userId: M.userId }).from(M).innerJoin(users, eq(users.id, M.userId)).where(and(eq(M.householdId, m.householdId), eq(M.status, 'active'), inArray(M.role, ['owner', 'adult']), eq(M.showBalanceToChildren, true)));
             if (adults.length) {
                 const totals = await ctx.db.select({ userId: banks.userId, currencyCode: currencyBalances.currencyCode, amount: sql<string>`sum(${currencyBalances.balance})` }).from(banks).innerJoin(accounts, eq(accounts.bankId, banks.id)).innerJoin(currencyBalances, eq(currencyBalances.accountId, accounts.id)).where(and(inArray(banks.userId, adults.map(a => a.userId)), eq(banks.isTest, false))).groupBy(banks.userId, currencyBalances.currencyCode);
-                for (const a of adults) adultBalances.push({ memberId: a.memberId, name: a.name || a.email.split('@')[0]!, totals: totals.filter(t => t.userId === a.userId).map(t => ({ currencyCode: t.currencyCode, amount: money(t.amount) })) });
+                for (const a of adults) adultBalances.push({ memberId: a.memberId, name: householdDisplayName(a.name, a.email), totals: totals.filter(t => t.userId === a.userId).map(t => ({ currencyCode: t.currencyCode, amount: money(t.amount) })) });
             }
         }
         return { wallets: visible.map(({ wallet: w, childName }) => ({ id: w.id, kind: w.kind, name: w.name, currencyCode: w.currencyCode, balance: money(w.balance), childMemberId: w.childMemberId, childName, canWrite: canWriteWallet(m, w, 'expense'), canManage: w.kind === 'child' ? canManageChildWallet(m, w) : m.role !== 'child', canDeleteTransactions: m.role !== 'child' && (w.kind === 'shared' || canManageChildWallet(m, w)), limitSummary: summaries.get(w.id) ?? null })), sharedWalletsVisible: m.role === 'child' && m.household.childrenCanSeeSharedWallets ? all.filter(r => r.wallet.kind === 'shared').map(({ wallet: w }) => ({ id: w.id, name: w.name, currencyCode: w.currencyCode, balance: money(w.balance) })) : [], adultBalances };

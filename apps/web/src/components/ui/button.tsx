@@ -9,6 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        neutral: "bg-foreground text-background shadow-none hover:bg-foreground/90 focus-visible:ring-ring",
         // Violet gradient with a specular top edge and soft glow, like the mobile primary actions
         default:
           "bg-gradient-to-b from-violet-500 to-violet-600 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_20px_-8px_rgba(139,92,246,0.75)] hover:from-violet-400 hover:to-violet-600 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_10px_26px_-8px_rgba(139,92,246,0.9)]",

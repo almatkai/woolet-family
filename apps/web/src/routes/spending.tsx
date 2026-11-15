@@ -831,7 +831,7 @@ export function SpendingPage() {
                 const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
                 const finalEnd = endDate > lastDayOfMonth ? lastDayOfMonth : endDate;
 
-                const dateRange = `${finalStart.getDate()}-${finalEnd.getDate()} ${finalStart.toLocaleString('default', { month: 'short' })}`;
+                const dateRange = `${finalStart.getDate()}-${finalEnd.getDate()} ${finalStart.toLocaleString('en-US', { month: 'short' })}`;
 
                 return {
                     weekNum,
@@ -997,9 +997,9 @@ export function SpendingPage() {
                         "flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11px] font-mono",
                         receiptTheme === 'dark' ? "text-zinc-400" : "text-zinc-500"
                     )}>
-                        <span>{receiptDate.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' })}</span>
+                        <span>{receiptDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}</span>
                         <span>•</span>
-                        <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                 </div>
 
@@ -1763,7 +1763,7 @@ export function SpendingPage() {
                     <ChevronDown className="h-3.5 w-3.5 rotate-90" />
                 </Button>
                 <span className="text-[11px] font-bold px-1.5 uppercase font-mono tracking-wide min-w-[64px] whitespace-nowrap text-center">
-                    {selectedDate.toLocaleString('default', { month: 'short', year: 'numeric' })}
+                    {selectedDate.toLocaleString('en-US', { month: 'short', year: 'numeric' })}
                 </span>
                 <Button
                     variant="ghost"
@@ -1847,7 +1847,7 @@ export function SpendingPage() {
             {viewMode === 'month' ? (
                 renderReceipt(
                     paginatedTransactions,
-                    `${selectedDate.toLocaleString('default', { month: 'long' })} Spending`,
+                    `${selectedDate.toLocaleString('en-US', { month: 'long' })} Spending`,
                     monthTotal,
                     undefined,
                     true,

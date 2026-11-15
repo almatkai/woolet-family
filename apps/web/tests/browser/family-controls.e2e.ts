@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
+    let proposal = { id: 'purchase-1', description: 'New washing machine', amount: '1200.00', originalAmount: '1200.00', proposerUserId: 'jordan', proposerName: 'Jordan Martinez', lastActorName: 'Jordan Martinez', awaitingName: null as string | null, walletName: 'Groceries', walletId: 'shared', currencyCode: 'USD', walletBalance: '2020.00', date: '2026-11-15', status: 'pending', canRespond: true, canDecline: true, canWithdraw: false, unavailableReason: null, createdAt: '2026-11-15T12:00:00Z', decidedAt: null };
     await page.route('**/trpc/**', async (route) => {
         const url = new URL(route.request().url());
         const procedures = url.pathname.split('/trpc/')[1].split(',');
@@ -8,8 +9,13 @@ test.beforeEach(async ({ page }) => {
         await route.fulfill({
             json: procedures.map((procedure, index) => {
                 const input = inputs[index]?.json ?? {};
+                if (procedure === 'household.respondToPurchaseProposal' && input.action === 'counter') proposal = { ...proposal, amount: input.amount, lastActorName: 'Alex Martinez', awaitingName: 'Jordan Martinez', canRespond: false, canWithdraw: true, status: 'countered' };
                 return { result: { data: { json:
-                    procedure === 'household.limits' && input.walletId !== 'shared' ? [{
+                    procedure === 'household.purchaseAgreement' ? { limit: '1000.00', canEdit: true, updatedByName: null, updatedAt: null }
+                    : procedure === 'household.purchaseProposals' ? { proposals: [proposal] }
+                    : procedure === 'household.addTransaction' ? { approvalRequired: true, proposal: { id: 'purchase-2' }, transaction: null, balance: '2020.00', limitWarnings: [] }
+                    : procedure === 'household.respondToPurchaseProposal' ? { proposal, transactionId: null }
+                    : procedure === 'household.limits' && input.walletId !== 'shared' ? [{
                         id: 'limit', categoryId: null, categoryName: null, period: 'monthly',
                         amount: input.walletId === 'alex' ? '10.00' : '50.00', spent: '9.00',
                         remaining: input.walletId === 'alex' ? '1.00' : '41.00',
@@ -21,6 +27,35 @@ test.beforeEach(async ({ page }) => {
         });
     });
     await page.goto('/tests/fixtures/family-controls.html');
+});
+
+test('shared purchase switches to approval strictly above the limit and closes after sending', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.getByRole('button', { name: 'Shared purchase', exact: true }).click();
+    await page.getByLabel('Amount, USD').fill('1000');
+    await expect(page.getByRole('button', { name: 'Add expense', exact: true })).toBeEnabled();
+    await page.getByLabel('Amount, USD').fill('1000.01');
+    await expect(page.getByText(/Another adult must approve this/)).toBeVisible();
+    const sent = page.waitForRequest(request => request.method() === 'POST' && request.url().includes('household.addTransaction'));
+    await page.getByRole('button', { name: 'Send for approval', exact: true }).click();
+    await sent;
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+});
+
+test('counter works at 375px and returns the turn without spending', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.getByRole('button', { name: 'Purchase proposals', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Purchases waiting for you', exact: true })).toBeVisible();
+    await expect(page.getByText(/Nothing is spent or reserved/)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: '/tmp/woolet-approval-375.png', fullPage: true });
+    await page.getByRole('button', { name: 'Counter', exact: true }).click();
+    await page.getByLabel('New amount, USD').fill('950,50');
+    await expect(page.getByLabel('New amount, USD')).toHaveValue('950.50');
+    await page.getByRole('button', { name: 'Send counter', exact: true }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await expect(page.getByText('Waiting for Jordan Martinez', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
 });
 
 test('guardian transfer warns for the selected child source and excludes it from destinations', async ({ page }) => {

@@ -778,7 +778,7 @@ export function AccountsPage() {
                 <ProductEmptyState
                     icon={<Landmark className="size-5" />}
                     title="No institutions yet"
-                    description="Add a bank or brokerage (like Kaspi, Freedom, Interactive Brokers) to get started"
+                    description="Add a bank or brokerage (like Chase, Bank of America, Fidelity) to get started"
                     action={<AddBankSheet />}
                 />
             ) : (

@@ -14,7 +14,7 @@ export function useFinanceView() {
     const setView = (next: 'family' | 'personal') =>
         void navigate({
             to: '.',
-            search: (previous) => ({
+            search: (previous: Record<string, unknown>) => ({
                 ...previous,
                 view: next === 'personal' ? 'personal' : undefined,
             }),

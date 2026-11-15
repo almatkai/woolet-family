@@ -35,7 +35,7 @@ export function FamilySpending({
     const update = (patch: Partial<typeof search>) =>
         void navigate({
             to: '.',
-            search: (previous) => ({ ...previous, ...patch }),
+            search: (previous: Record<string, unknown>) => ({ ...previous, ...patch }),
         });
     const query = trpc.household.overview.useQuery({
         month,

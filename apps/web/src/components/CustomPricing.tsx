@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTheme } from './theme-provider';
 import { usePricing } from './PricingContext';
+import { trpc } from '@/lib/trpc';
 
 type TierId = 'free' | 'pro' | 'premium';
 
@@ -91,6 +92,7 @@ const Icons = {
 export function CustomPricing() {
     const { user } = useUser();
     const { isSignedIn } = useAuth();
+    const { data: profile } = trpc.user.me.useQuery(undefined, { enabled: !!isSignedIn });
     const { resolvedTheme } = useTheme();
     const { activePlanId, activePriceId } = usePricing();
     const [paddle, setPaddle] = useState<Paddle | undefined>();
@@ -147,6 +149,7 @@ export function CustomPricing() {
     }, [paddle, paidPlans]);
 
     async function handleCheckout(plan: Plan) {
+        if (profile?.isDemo) return;
         if (!plan.priceId) return;
         if (!isSignedIn) {
             window.location.assign('/login');
@@ -181,6 +184,11 @@ export function CustomPricing() {
             setOpeningPlan(null);
         }
     }
+
+    if (profile?.isDemo) return <div className="space-y-3 p-6">
+        <h1 className="text-xl font-semibold">Billing is unavailable in the demo</h1>
+        <p className="text-sm text-muted-foreground">The sample family already has access to all features. Sign in to your own account to choose a plan.</p>
+    </div>;
 
     return (
         <main className="relative min-h-full overflow-hidden bg-background text-foreground">
@@ -240,7 +248,7 @@ export function CustomPricing() {
                                     )}
                                     variant={plan.featured ? 'default' : 'outline'}
                                     onClick={() => plan.priceId ? void handleCheckout(plan) : undefined}
-                                    disabled={isCurrent || !plan.priceId || openingPlan !== null}
+                                    disabled={profile?.isDemo || isCurrent || !plan.priceId || openingPlan !== null}
                                 >
                                     {openingPlan === plan.id ? <Icons.Loader className="h-4 w-4 animate-spin" /> : null}
                                     {isCurrent ? 'Your current plan' : plan.priceId ? `Upgrade to ${plan.name}` : 'Your current plan'}

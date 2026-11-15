@@ -17,6 +17,7 @@ import {
   type CapabilityAction,
 } from './capability-registry';
 import { AiUsageService } from './ai-usage-service';
+import { DEMO_AI_QUESTION_LIMIT, getDemoRole } from '../../lib/demo';
 
 const MAX_CHAT_TOOL_TURNS = 5;
 const CHAT_HISTORY_LIMIT = 30;
@@ -277,7 +278,9 @@ async function enrichAttachmentsWithQrUrlContent(attachments?: ChatAttachment[])
   }));
 }
 
-function enforceChatUsageLimit(userTier: string, usage: Awaited<ReturnType<typeof AiUsageService.getUsage>>) {
+function enforceChatUsageLimit(userTier: string, usage: Awaited<ReturnType<typeof AiUsageService.getUsage>>, userId: string) {
+  // Demo messages have already reserved one of the fixed lifetime questions.
+  if (getDemoRole(userId)) return;
   const creditConfig = getCreditLimit(userTier, 'aiChat');
 
   if (creditConfig.limit > 0) {
@@ -660,14 +663,29 @@ async function runToolCall(
 }
 
 export async function chatWithCapabilities(request: ChatRequest): Promise<ChatResponse> {
+  if (!getDemoRole(request.userId)) return runChatWithCapabilities(request);
+  const reservation = await AiUsageService.reserveDemoQuestion(request.userId);
+  let blocked = false;
+  try {
+    const response = await runChatWithCapabilities(request, () => { blocked = true; });
+    if (blocked) await AiUsageService.releaseDemoQuestion(reservation, request.userId);
+    return response;
+  } catch (error) {
+    await AiUsageService.releaseDemoQuestion(reservation, request.userId);
+    throw error;
+  }
+}
+
+async function runChatWithCapabilities(request: ChatRequest, onGuardBlocked?: () => void): Promise<ChatResponse> {
   const [usage, guard] = await Promise.all([
     AiUsageService.getUsage(request.userId),
     checkPromptGuard(request.message),
   ]);
 
-  enforceChatUsageLimit(request.userTier, usage);
+  enforceChatUsageLimit(request.userTier, usage, request.userId);
 
   if (!guard.isSafe) {
+    onGuardBlocked?.();
     return {
       response: 'Looks like you are trying to prompt inject, huh? 🤨',
       sessionId: request.sessionId || 'blocked',
@@ -846,12 +864,34 @@ export async function chatWithCapabilitiesStream(
   request: ChatRequest,
   emit: (event: ChatStreamEvent) => void | Promise<void>
 ): Promise<void> {
+  if (!getDemoRole(request.userId)) return runChatWithCapabilitiesStream(request, emit);
+  let reservation: string;
+  try { reservation = await AiUsageService.reserveDemoQuestion(request.userId); }
+  catch (error) {
+    await emit({ type: 'error', message: error instanceof Error ? error.message : 'Demo AI is unavailable.' });
+    return;
+  }
+  let completed = false;
+  try {
+    await runChatWithCapabilitiesStream(request, async event => {
+      if (event.type === 'final') completed = true;
+      await emit(event);
+    });
+  } finally {
+    if (!completed) await AiUsageService.releaseDemoQuestion(reservation, request.userId);
+  }
+}
+
+async function runChatWithCapabilitiesStream(
+  request: ChatRequest,
+  emit: (event: ChatStreamEvent) => void | Promise<void>
+): Promise<void> {
   const [usage, guard] = await Promise.all([
     AiUsageService.getUsage(request.userId),
     checkPromptGuard(request.message),
   ]);
 
-  enforceChatUsageLimit(request.userTier, usage);
+  enforceChatUsageLimit(request.userTier, usage, request.userId);
 
   if (!guard.isSafe) {
     await emit({ type: 'error', message: 'Looks like you are trying to prompt inject, huh? 🤨' });
@@ -1064,7 +1104,8 @@ export async function chatWithCapabilitiesStream(
 
 export async function getChatUsageStats(userId: string, userTier: string) {
   const usage = await AiUsageService.getUsage(userId);
-  const creditConfig = getCreditLimit(userTier, 'aiChat');
+  const isDemo = Boolean(getDemoRole(userId));
+  const creditConfig = isDemo ? { limit: 0, lifetimeLimit: DEMO_AI_QUESTION_LIMIT } : getCreditLimit(userTier, 'aiChat');
 
   return {
     usageToday: usage.questionCountToday,
@@ -1072,8 +1113,8 @@ export async function getChatUsageStats(userId: string, userTier: string) {
     limit: creditConfig.limit,
     lifetimeLimit: creditConfig.lifetimeLimit,
     tierTitle: 'Woo',
-    isLimited: userTier === 'pro',
-    isFull: userTier === 'premium',
+    isLimited: isDemo || userTier === 'pro',
+    isFull: !isDemo && userTier === 'premium',
     remaining:
       creditConfig.limit > 0
         ? Math.max(0, creditConfig.limit - usage.questionCountToday)

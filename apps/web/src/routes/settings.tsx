@@ -54,6 +54,7 @@ import { Bell, BellRing } from 'lucide-react';
 import { SignOutButton, useUser } from '@clerk/clerk-react';
 import { CurrencySelector } from '@/components/ui/currency-selector';
 import { UsernameSetupDialog } from '@/components/UsernameSetupDialog';
+import { Link } from '@tanstack/react-router';
 
 export function SettingsPage() {
     const { theme, setTheme } = useTheme();
@@ -256,6 +257,12 @@ export function SettingsPage() {
     ] as const;
     const pushReady = isSubscribed || hasBrowserPermission;
     const compactTrigger = 'h-9 w-full sm:w-[190px] text-sm';
+
+    if (me?.isDemo) return <div className="mx-auto max-w-3xl space-y-4 p-4">
+        <PageHeader title="Demo settings" subtitle="Shared sample accounts" variant="one">{null}</PageHeader>
+        <p className="text-sm text-muted-foreground">Profile, notifications, billing, imports and account deletion are unavailable in the shared demo. Your own account has the full settings page.</p>
+        <Button variant="outline" asChild><Link to="/family">Back to the family</Link></Button>
+    </div>;
 
     return (
         <div className="mx-auto max-w-3xl space-y-6 overflow-x-hidden pb-10">

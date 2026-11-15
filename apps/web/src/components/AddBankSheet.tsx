@@ -96,7 +96,7 @@ export function AddBankSheet({ trigger }: { trigger?: React.ReactNode }) {
                 <SheetHeader>
                     <SheetTitle>Add Bank</SheetTitle>
                     <SheetDescription>
-                        Add a bank or brokerage (e.g. Freedom Bank, Interactive Brokers, Robinhood).
+                        Add a bank or brokerage (e.g. Chase, Bank of America, Fidelity).
                     </SheetDescription>
                 </SheetHeader>
 

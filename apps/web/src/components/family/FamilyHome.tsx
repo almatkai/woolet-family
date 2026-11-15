@@ -52,7 +52,7 @@ export function FamilyHome({
     ) =>
         void navigate({
             to: '.',
-            search: (previous) => ({ ...previous, ...patch }),
+            search: (previous: Record<string, unknown>) => ({ ...previous, ...patch }),
         });
     const query = trpc.household.overview.useQuery({
         month,
