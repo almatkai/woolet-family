@@ -4,6 +4,8 @@ import { Rectangles } from './ui/rectangles';
 import { HeroBackground } from './ui/HeroBackground';
 import { useTheme } from './theme-provider';
 
+const LANDING_URL = import.meta.env.VITE_LANDING_URL || 'https://woolet.cc';
+
 interface AuthLayoutProps {
     children: React.ReactNode;
     title: string;
@@ -158,7 +160,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
                     {/* Footer */}
                     <div className="mt-6 text-center">
                         <a
-                            href="/"
+                            href={LANDING_URL}
                             className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300 inline-flex items-center gap-2"
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
