@@ -49,7 +49,7 @@ export function GlassEdge() {
     return (
         <>
             <svg
-                className="absolute top-0 left-3 right-3 h-[1.5px] w-[calc(100%-24px)] pointer-events-none"
+                className="absolute top-0 left-3 right-3 !m-0 h-[1.5px] w-[calc(100%-24px)] pointer-events-none"
                 viewBox="0 0 100 1"
                 preserveAspectRatio="none"
                 aria-hidden="true"
@@ -66,7 +66,7 @@ export function GlassEdge() {
                 <rect x="0" y="0" width="100" height="1" fill="url(#webGlassEdgeTop)" />
             </svg>
             <svg
-                className="absolute bottom-0 left-3 right-3 h-[1.5px] w-[calc(100%-24px)] pointer-events-none"
+                className="absolute bottom-0 left-3 right-3 !m-0 h-[1.5px] w-[calc(100%-24px)] pointer-events-none"
                 viewBox="0 0 100 1"
                 preserveAspectRatio="none"
                 aria-hidden="true"
