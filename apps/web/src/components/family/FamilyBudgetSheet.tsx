@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
     Sheet,
@@ -163,15 +164,17 @@ export function FamilyBudgetSheet({
                     }}
                 >
                     <fieldset disabled={busy} className="space-y-4 min-w-0">
-                        <label className="block space-y-2">
-                            <span>Monthly budget, {overview.baseCurrency}</span>
+                        <div className="space-y-2">
+                            <Label htmlFor="family-monthly-budget" className="block">Monthly budget, {overview.baseCurrency}</Label>
                             <Input
-                                aria-label="Monthly budget"
+                                id="family-monthly-budget"
+                                aria-invalid={submitted && !valid(total)}
+                                aria-describedby={submitted && !valid(total) ? 'family-budget-amount-error' : undefined}
                                 inputMode="decimal"
                                 value={total}
                                 onChange={(e) => setTotal(e.target.value)}
                             />
-                        </label>
+                        </div>
                         {Number(overview.previousMonthExpense) > 0 && (
                             <p className="text-xs text-muted-foreground">
                                 The family spent{' '}
@@ -189,9 +192,9 @@ export function FamilyBudgetSheet({
                         {submitted &&
                             (!valid(total) ||
                                 rows.some((r) => !valid(r.amount))) && (
-                                <Notice tone="error">
+                                <p id="family-budget-amount-error" className="text-xs text-destructive">
                                     Enter an amount greater than zero
-                                </Notice>
+                                </p>
                             )}
                         <h3 className="text-sm font-semibold">Category budgets (optional)</h3>
                         {categoriesQuery.error && (
@@ -228,6 +231,8 @@ export function FamilyBudgetSheet({
                                         <SelectTrigger
                                             className="min-w-0 flex-1"
                                             aria-label="Category"
+                                            aria-invalid={submitted && !r.categoryId}
+                                            aria-describedby={submitted && !r.categoryId ? `budget-category-${r.key}-error` : undefined}
                                         >
                                             <SelectValue placeholder="Choose a category" />
                                         </SelectTrigger>
@@ -255,6 +260,8 @@ export function FamilyBudgetSheet({
                                     <Input
                                         className="w-24"
                                         aria-label="Category budget amount"
+                                        aria-invalid={submitted && !valid(r.amount)}
+                                        aria-describedby={submitted && !valid(r.amount) ? 'family-budget-amount-error' : undefined}
                                         inputMode="decimal"
                                         value={r.amount}
                                         onChange={(e) =>
@@ -298,7 +305,7 @@ export function FamilyBudgetSheet({
                                     spent this month
                                 </p>
                                 {submitted && !r.categoryId && (
-                                    <p>Choose a category</p>
+                                    <p id={`budget-category-${r.key}-error`} className="text-xs text-destructive">Choose a category</p>
                                 )}
                             </div>
                         ))}
