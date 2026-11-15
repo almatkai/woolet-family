@@ -25,7 +25,7 @@ export function FamilyPositionCard({
                         `Income in ${date.toLocaleDateString('en', { month: 'short' })}`,
                         total?.income,
                     ],
-                    ['Net worth', finances.summary.balancesConverted],
+                    ['Account balances', finances.summary.balancesConverted],
                     ['Owes', finances.summary.owesConverted],
                     [
                         'Monthly payments',
@@ -35,6 +35,11 @@ export function FamilyPositionCard({
                     <div key={label}>
                         <dt className="text-xs text-muted-foreground">
                             {label}
+                            {label === 'Owes' && (
+                                <p className="text-[11px] text-muted-foreground">
+                                    Debts to people outside the family
+                                </p>
+                            )}
                         </dt>
                         <dd className="mt-1 text-lg font-semibold tabular-nums">
                             {amount == null ? (
@@ -44,7 +49,7 @@ export function FamilyPositionCard({
                                     ≈{' '}
                                     <FamilyMoney
                                         amount={amount}
-                                        currency={label === 'Net worth' || label === 'Owes' || label === 'Monthly payments' ? finances.displayCurrency : currency}
+                                        currency={label === 'Account balances' || label === 'Owes' || label === 'Monthly payments' ? finances.displayCurrency : currency}
                                         abbreviate
                                     />
                                 </>

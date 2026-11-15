@@ -26,6 +26,9 @@ export type FamilyFinances = {
         owes: CurrencyAmount[]; owesConverted: string; owed: CurrencyAmount[]; owedConverted: string;
         monthlyPayments: CurrencyAmount[]; monthlyPaymentsConverted: string;
         creditsCount: number; mortgagesCount: number; depositsCount: number; subscriptionsCount: number;
+        creditsMonthlyConverted: string; creditsRemainingConverted: string;
+        mortgagesMonthlyConverted: string; mortgagesRemainingConverted: string;
+        depositsConverted: string; subscriptionsMonthlyConverted: string;
         investmentsValueConverted: string | null;
     };
     internalDebts: InternalDebt[];

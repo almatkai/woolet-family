@@ -123,7 +123,7 @@ export function FamilyDailySpending({
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                    <div className="sr-only focus-within:not-sr-only flex flex-wrap gap-1 p-2">
+                    <div className="sr-only">
                         {(
                             overview.filtered ?? overview.converted
                         ).dailyExpenses.map((d) => (

@@ -49,6 +49,8 @@ export function FamilySubscriptions({
                     <FamilySectionTotal
                         label="Family subscriptions"
                         totals={totals(data.members)}
+                        converted={data.summary.subscriptionsMonthlyConverted}
+                        unconvertedCurrencies={data.unconvertedCurrencies}
                         currency={data.displayCurrency}
                         suffix=" a month"
                     />

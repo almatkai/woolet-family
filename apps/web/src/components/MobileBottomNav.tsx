@@ -1,5 +1,7 @@
 'use client';
 
+import { retainFinanceView } from '@/lib/finance-navigation';
+
 import { useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
@@ -98,7 +100,7 @@ export function MobileBottomNav() {
                         {moreItems.filter(item => !familyOnly || !familyFocusHiddenPaths.has(item.url)).map((item) => (
                             <Link
                                 key={item.title}
-                                to={item.url}
+                                to={item.url} search={retainFinanceView}
                                 onClick={() => setMoreOpen(false)}
                                 className={cn(
                                     'flex flex-col items-center gap-1.5 rounded-2xl p-2.5 transition-all',
@@ -160,7 +162,7 @@ export function MobileBottomNav() {
 
                     {/* Woo AI Mascot Tab */}
                     <Link
-                        to="/woo"
+                        to="/woo" search={retainFinanceView}
                         className="relative flex flex-col items-center gap-1 min-w-[50px] transition-transform active:scale-90"
                         aria-label="Woo AI Assistant"
                     >
@@ -208,7 +210,7 @@ interface NavTabProps {
 function NavTab({ title, url, icon: Icon, active }: NavTabProps) {
     return (
         <Link
-            to={url}
+            to={url} search={retainFinanceView}
             className={cn(
                 'relative flex flex-col items-center gap-1 min-w-[50px] transition-colors active:scale-95',
                 active ? 'text-foreground font-bold' : 'text-muted-foreground'

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
     Link,
     useParams,
@@ -21,7 +22,7 @@ import {
     MoneyTotals,
     roleLabel,
 } from '@/components/family/shared';
-import { canOpenMember, isChildMember } from '@/components/family/permissions';
+import { canOpenMember, canRequestMemberFinances, isChildMember } from '@/components/family/permissions';
 import {
     localToday,
     type HouseholdOverview,
@@ -65,29 +66,31 @@ export function FamilyMemberPage() {
     const navigate = useNavigate();
     const month = search.month ?? localToday().slice(0, 7);
     const family = trpc.household.get.useQuery();
+    const canRequest = canRequestMemberFinances(family.data as HouseholdOverview | undefined, memberId);
+    // Finances is the admission query. If access changed since household.get,
+    // do not start the remaining member queries after a denial.
+    const finances = trpc.household.familyFinances.useQuery({
+        memberId,
+        currency: search.currency,
+    }, { enabled: canRequest, retry: false });
+    const memberAvailable = canRequest && !!finances.data && !finances.error;
     const overview = trpc.household.overview.useQuery({
         month,
         currency: search.currency,
         memberId,
-    });
-    const finances = trpc.household.familyFinances.useQuery({
-        memberId,
-        currency: search.currency,
-    });
+    }, { enabled: memberAvailable, retry: false });
     const transactions = trpc.household.familyTransactions.useInfiniteQuery(
+        { month, memberId },
         {
-            month,
-            memberId,
-        },
-        {
-            getNextPageParam: (last: FamilyTransactionsOutput) =>
-                last.nextCursor ?? undefined,
+            enabled: memberAvailable,
+            retry: false,
+            getNextPageParam: (last: FamilyTransactionsOutput) => last.nextCursor ?? undefined,
         },
     );
     const tax = trpc.household.familyTax.useQuery({
         taxYear: currentTaxYear(),
-    });
-    const wallets = trpc.household.wallets.useQuery({ today: localToday() });
+    }, { enabled: memberAvailable, retry: false });
+    const wallets = trpc.household.wallets.useQuery({ today: localToday() }, { enabled: memberAvailable, retry: false });
     const data = overview.data as HouseholdOverviewOutput | undefined;
     const holdings = finances.data as FamilyFinancesOutput | undefined;
     const ledger = transactions.data
@@ -122,6 +125,7 @@ export function FamilyMemberPage() {
         </Button>
     );
     const unavailable =
+        (family.isSuccess && !family.error && !canRequest) ||
         [overview.error, finances.error, transactions.error].some(
             (error) =>
                 error?.data?.code === 'NOT_FOUND' ||
@@ -143,11 +147,11 @@ export function FamilyMemberPage() {
                 error={
                     !!family.error ||
                     !!overview.error ||
-                    (!family.isLoading && !overview.isLoading)
+                    !!finances.error
                 }
                 retry={() => {
                     void family.refetch();
-                    void overview.refetch();
+                    if (canRequest) void finances.refetch();
                 }}
             />
         );
@@ -170,7 +174,7 @@ export function FamilyMemberPage() {
     const wallet = (
         wallets.data as FamilyWalletsResponse | undefined
     )?.wallets.find((row) => row.childMemberId === memberId);
-    const sections = own
+    const sections: { title: string; rows: { name: string; detail?: ReactNode; totals: { currency: string; amount: string }[] }[] }[] = own
         ? [
               {
                   title: 'Accounts',
@@ -186,10 +190,13 @@ export function FamilyMemberPage() {
                   title: 'Loans',
                   rows: [...own.credits, ...own.mortgages].map((item) => ({
                       name: item.name,
-                      detail:
-                          'monthlyPayment' in item
-                              ? `Monthly payment; ${'endDate' in item ? `ends ${formatDay(item.endDate)}` : `payment day ${item.paymentDay ?? 'not set'}`}`
-                              : '',
+                      detail: (
+                          <>
+                              <FamilyMoney amount={item.monthlyPayment} currency={item.currency} />
+                              {' a month, '}
+                              {'endDate' in item ? `ends ${formatDay(item.endDate)}` : `payment day ${item.paymentDay ?? 'not set'}`}
+                          </>
+                      ),
                       totals: [
                           { currency: item.currency, amount: item.remaining },
                       ],
@@ -257,6 +264,7 @@ export function FamilyMemberPage() {
             >
                 {null}
             </PageHeader>
+            <p className="text-sm text-muted-foreground sm:hidden">{roleLabel(member.role, member.isGuardian)}</p>
             <p className="text-sm text-muted-foreground">
                 {member.isMe
                     ? 'This is how your family sees your finances.'
@@ -287,7 +295,7 @@ export function FamilyMemberPage() {
                 <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3">
                     {[
                         {
-                            label: 'Net worth',
+                            label: 'Account balances',
                             amount: summaryMember?.netWorth,
                             query: overview,
                             currency: data?.displayCurrency,
@@ -320,6 +328,11 @@ export function FamilyMemberPage() {
                             <div key={label}>
                                 <dt className="text-xs text-muted-foreground">
                                     {label}
+                                    {label === 'Owes' && (
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Debts to people outside the family
+                                        </p>
+                                    )}
                                 </dt>
                                 <dd className="text-base font-semibold tabular-nums">
                                     {query.error ? (
@@ -455,10 +468,7 @@ export function FamilyMemberPage() {
                                     >
                                         <div>
                                             <p>{row.name}</p>
-                                            {'detail' in row &&
-                                                typeof row.detail ===
-                                                    'string' &&
-                                                row.detail && (
+                                            {row.detail && (
                                                     <p className="text-xs text-muted-foreground">
                                                         {row.detail}
                                                     </p>

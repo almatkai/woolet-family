@@ -1,3 +1,5 @@
+import type { HouseholdOverview } from './types';
+
 type Role = 'owner' | 'adult' | 'child';
 export function familyPermissions(me: {
     role: Role;
@@ -76,4 +78,10 @@ export function canShowChildWallet(
 
 export function isChildMember(member: { role: Role }) {
     return member.role === 'child';
+}
+
+/** Decide access before sending queries that are forbidden for this viewer. */
+export function canRequestMemberFinances(family: HouseholdOverview | undefined, memberId: string) {
+    const member = family?.members.find(row => row.id === memberId);
+    return !!family && !!member && canUseFamilyView(family.me) && visibleFamilyMember(family.me, member);
 }

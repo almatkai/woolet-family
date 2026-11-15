@@ -1,3 +1,6 @@
+import { Plus } from 'lucide-react';
+import { AddTransactionSheet } from '@/components/AddTransactionSheet';
+import { ActionButton } from '@/components/ui/action-button';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
@@ -72,6 +75,13 @@ export function FamilySpending({
         <FamilySection
             title="Spending"
             family={family}
+            actions={<AddTransactionSheet trigger={
+                <ActionButton>
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden md:inline">Add Transaction</span>
+                    <span className="md:hidden">Add</span>
+                </ActionButton>
+            } />}
             controls={
                 <FamilyPeriodControls
                     {...{ monthName, date, move, update, currency, overview }}

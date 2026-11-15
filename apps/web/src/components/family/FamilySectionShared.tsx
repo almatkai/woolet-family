@@ -13,22 +13,24 @@ export function FamilySection({
     family,
     children,
     controls,
+    actions,
 }: {
     title: string;
     family: NonNullable<HouseholdOverview>;
     children: ReactNode;
     controls?: ReactNode;
+    actions?: ReactNode;
 }) {
     return (
         <div className="space-y-4 md:space-y-6">
             <PageHeader
                 title={title}
                 subtitle={family.household.name}
-                variant="one"
+                variant={actions ? 'two-with-text' : 'one'}
             >
-                <UniversalAddSheet
+                {actions ?? <UniversalAddSheet
                     trigger={<ActionButton>+ Add</ActionButton>}
-                />
+                />}
             </PageHeader>
             <div className="flex flex-wrap items-center gap-2">
                 <ScopeSwitch />

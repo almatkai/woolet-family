@@ -15,6 +15,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FamilyMoney, rowClass, sectionLabel } from './shared';
 import type {
@@ -37,7 +38,8 @@ type FinancePath =
     | '/family';
 
 export function FamilyFinancesNav({
-    finances,
+    financesQuery,
+    finances: loadedFinances,
     overview,
     spent,
     monthName,
@@ -49,6 +51,7 @@ export function FamilyFinancesNav({
     month,
     search,
 }: {
+    financesQuery: { error: unknown; refetch: () => unknown };
     finances: FamilyFinancesOutput | undefined;
     overview: HouseholdOverviewOutput | undefined;
     spent: number;
@@ -59,15 +62,24 @@ export function FamilyFinancesNav({
     wallets: { error: unknown; data?: { wallets: unknown[] } };
     family: NonNullable<HouseholdOverview>;
     month: string;
-    search: { currency?: string };
+    search: { currency?: string; member?: string; category?: string };
 }) {
+    const finances = financesQuery.error ? undefined : loadedFinances;
     const financeMoney = (amount: string | number) => finances ? (
-        <FamilyMoney amount={amount} currency={finances.displayCurrency} />
+        <FamilyMoney amount={amount} currency={finances.displayCurrency} abbreviate />
     ) : '—';
     return (
         <section className="space-y-3">
             <h2 className={sectionLabel}>Family finances</h2>
             <GlassCard className="p-2 sm:p-3">
+                {!!financesQuery.error && (
+                    <div role="alert" className="px-3 text-sm">
+                        Couldn't load the figures.
+                        <Button variant="ghost" size="sm" onClick={() => void financesQuery.refetch()}>
+                            Try again
+                        </Button>
+                    </div>
+                )}
                 <div className="grid lg:grid-cols-2 divide-y divide-border dark:divide-white/[0.06]">
                     {(
                         [
@@ -112,7 +124,7 @@ export function FamilyFinancesNav({
                                 Landmark,
                                 finances &&
                                     (finances.summary.creditsCount
-                                        ? `${finances.summary.creditsCount} active`
+                                        ? <>{finances.summary.creditsCount} active, ≈ {financeMoney(finances.summary.creditsMonthlyConverted)} a month</>
                                         : 'No credits'),
                             ],
                             [
@@ -121,7 +133,7 @@ export function FamilyFinancesNav({
                                 House,
                                 finances &&
                                     (finances.summary.mortgagesCount
-                                        ? `${finances.summary.mortgagesCount} active`
+                                        ? <>{finances.summary.mortgagesCount} active, ≈ {financeMoney(finances.summary.mortgagesMonthlyConverted)} a month</>
                                         : 'No mortgages'),
                             ],
                             [
@@ -130,7 +142,7 @@ export function FamilyFinancesNav({
                                 PiggyBank,
                                 finances &&
                                     (finances.summary.depositsCount
-                                        ? `${finances.summary.depositsCount} ${finances.summary.depositsCount === 1 ? 'deposit' : 'deposits'}`
+                                        ? <>≈ {financeMoney(finances.summary.depositsConverted)}</>
                                         : 'No deposits'),
                             ],
                             [
@@ -139,7 +151,7 @@ export function FamilyFinancesNav({
                                 Repeat,
                                 finances &&
                                     (finances.summary.subscriptionsCount
-                                        ? `${finances.summary.subscriptionsCount} active`
+                                        ? <>{finances.summary.subscriptionsCount} active, ≈ {financeMoney(finances.summary.subscriptionsMonthlyConverted)} a month</>
                                         : 'No subscriptions'),
                             ],
                             [
@@ -210,6 +222,7 @@ export function FamilyFinancesNav({
                                 search={{
                                     month,
                                     currency: search.currency,
+                                    ...(to === '/spending' ? { member: search.member, category: search.category } : {}),
                                     view: undefined,
                                 }}
                                 className={rowClass}

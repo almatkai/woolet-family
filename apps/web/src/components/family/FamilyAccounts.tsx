@@ -1,3 +1,7 @@
+import { CircleDollarSign } from 'lucide-react';
+import { TransferSheet } from '@/components/TransferSheet';
+import { AddBankSheet } from '@/components/AddBankSheet';
+import { ActionButton } from '@/components/ui/action-button';
 import { useSearch } from '@tanstack/react-router';
 import { familyTotals } from './familyTotals';
 import { trpc } from '@/lib/trpc';
@@ -28,7 +32,16 @@ export function FamilyAccounts({
     const data = query.data as FamilyFinancesOutput | undefined;
     const { setView } = useFinanceView();
     return (
-        <FamilySection title="Accounts" family={family}>
+        <FamilySection title="Accounts" family={family} actions={
+            <>
+                <TransferSheet trigger={
+                    <ActionButton variant="secondary" className="flex-1 sm:flex-none">
+                        <CircleDollarSign className="h-4 w-4" /> Transfer
+                    </ActionButton>
+                } />
+                <AddBankSheet />
+            </>
+        }>
             {data ? (
                 <>
                     <FamilySectionTotal
