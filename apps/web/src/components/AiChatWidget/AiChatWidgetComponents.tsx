@@ -216,11 +216,9 @@ function getToolTraceLabel(event: Extract<ChatTraceEvent, { type: 'tool_call' | 
 }
 
 function getProviderFailureLabel(event: Extract<ChatTraceEvent, { type: 'provider_failure' }>) {
-    const provider = getReadableToolName(event.provider);
-    if (event.willRetry && event.nextProvider) {
-        return `${provider} failed, trying ${getReadableToolName(event.nextProvider)}`;
-    }
-    return `${provider} failed, no fallback provider`;
+    return event.willRetry
+        ? 'Woo had trouble responding. Trying again…'
+        : 'Woo could not respond. Please try again.';
 }
 
 function isPendingModelMessage(message: Message, index: number, messages: Message[], isLoading: boolean) {
@@ -594,27 +592,18 @@ function ChatSettingsDialog({
 function ChatTrace({ trace }: { trace?: ChatTraceEvent[] }) {
     if (!trace?.length) return null;
 
-    const completedGeneration = [...trace].reverse().find((event) => event.type === 'generation' && event.status === 'completed');
     const providerFailures = trace.filter((event) => event.type === 'provider_failure');
     const toolEvents = trace.filter((event) => event.type === 'tool_call' || event.type === 'tool_result');
-    const hasVisibleTrace = Boolean(completedGeneration) || providerFailures.length > 0 || toolEvents.length > 0;
+    const hasVisibleTrace = providerFailures.length > 0 || toolEvents.length > 0;
 
     if (!hasVisibleTrace) return null;
 
     return (
         <div className="mb-2 space-y-1 border-b border-border/50 pb-2 text-[10px] text-muted-foreground">
-            {completedGeneration?.type === 'generation' && (
-                <div className="flex items-center gap-1.5">
-                    <Cpu className="size-3" />
-                    <span className="truncate">
-                        {completedGeneration.provider || 'provider'} / {completedGeneration.model || 'model'}
-                    </span>
-                </div>
-            )}
             {providerFailures.map((event) => (
                 <div key={`${event.type}-${event.provider}-${event.model}-${event.turn}-${event.willRetry}`} className="flex items-center gap-1.5">
                     <Cpu className="size-3" />
-                    <span className="truncate" title={`${event.provider} / ${event.model}: ${event.error}`}>
+                    <span className="truncate" title={getProviderFailureLabel(event)}>
                         {getProviderFailureLabel(event)}
                     </span>
                 </div>
