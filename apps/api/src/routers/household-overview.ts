@@ -42,7 +42,7 @@ export const householdOverviewProcedures = {
                     eq(transactions.lifecycleStatus, 'active'), eq(transactions.excludeFromMonthlyStats, false), inArray(transactions.type, ['income', 'expense', 'transfer'])),
                 with: { category: true, currencyBalance: true },
             });
-            for (const tx of personal) rows.push({ id: `p:${tx.id}`, date: tx.date, kind: tx.type as LedgerRow['kind'], amount: tx.amount,
+            for (const tx of personal) rows.push({ id: `p:${tx.id}`, date: tx.date, kind: tx.type as LedgerRow['kind'], amount: String(tx.amount),
                 currencyCode: tx.currencyBalance.currencyCode, memberId: member.id, categoryId: tx.categoryId, categoryName: tx.category?.name ?? null });
         }
         const walletRows = await ctx.db.select({ wallet: familyWallets, transaction: familyWalletTransactions, categoryName: categories.name }).from(familyWalletTransactions)
@@ -55,7 +55,7 @@ export const householdOverviewProcedures = {
             const childWalletInAdultTotals = wallet.kind === 'child' && wallet.householdId === viewer.householdId;
             if (!canViewWallet(viewer, wallet) && !childWalletInAdultTotals) continue;
             rows.push({ id: `w:${tx.id}`, date: tx.date, kind: tx.type === 'income' || tx.type === 'expense' ? tx.type : 'transfer',
-                amount: tx.amount, currencyCode: wallet.currencyCode,
+                amount: String(tx.amount), currencyCode: wallet.currencyCode,
                 memberId: wallet.kind === 'child' ? wallet.childMemberId : allMembers.find(({ member }) => member.userId === tx.createdByUserId)?.member.id ?? null,
                 categoryId: tx.categoryId, categoryName });
         }

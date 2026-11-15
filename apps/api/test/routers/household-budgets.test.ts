@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { PgDialect } from 'drizzle-orm/pg-core';
+import { PgDialect, getTableConfig } from 'drizzle-orm/pg-core';
+import { householdBudgets } from '../../src/db/schema';
 import { householdRouter } from '../../src/routers/household';
 import { createMockContext } from '../utils';
 
@@ -42,4 +43,15 @@ for (const id of [null, categoryId]) test(`budget upsert ${id} uses base currenc
 });
 for (const amount of ['0', '-1', '1.001', '1000000000000', 'NaN']) test(`reject invalid budget ${amount}`, async () => {
     await expect(setup().caller.setBudget({ categoryId: null, amount })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+});
+
+test('budget schema preserves cascade, set-null cleanup, positive amount and partial uniqueness', () => {
+    const config = getTableConfig(householdBudgets);
+    expect(config.checks.map(c => c.name)).toContain('household_budget_positive');
+    expect(config.indexes.map(i => i.config.name).sort()).toEqual(['household_budgets_category_unique', 'household_budgets_total_unique']);
+    expect(config.indexes.every(i => i.config.unique && i.config.where)).toBe(true);
+    const action = (column: unknown) => config.foreignKeys.find(fk => fk.reference().columns[0] === column)?.onDelete;
+    expect(action(householdBudgets.householdId)).toBe('cascade');
+    expect(action(householdBudgets.categoryId)).toBe('set null');
+    expect(action(householdBudgets.updatedByUserId)).toBe('set null');
 });

@@ -23,7 +23,10 @@ export function baseConverter(baseCurrency: string, rates: Record<string, number
     const convert = (amount: string, currencyCode: string): string | null => {
         const rate = currencyCode === baseCurrency ? 1 : rates[currencyCode];
         if (!Number.isFinite(rate) || rate <= 0) { missing.add(currencyCode); return null; }
-        return fromCents(Math.round(toCents(amount) / rate));
+        return fromCents(Math.round(toCents(String(amount)) / rate));
     };
     return { convert, missing };
 }
+
+// PostgreSQL JSON aggregation may decode numeric columns as JS numbers.
+export const moneyAmount = (amount: string): string => fromCents(toCents(String(amount)));

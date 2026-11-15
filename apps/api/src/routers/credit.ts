@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { readBankHierarchy } from '../lib/household/finance-reads';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../lib/trpc';
@@ -8,19 +9,7 @@ export const creditRouter = router({
     list: protectedProcedure
         .query(async ({ ctx }) => {
             // Get all credits for user's accounts
-            const userBanks = await ctx.db.query.banks.findMany({
-                where: and(
-                    eq(banks.userId, ctx.userId!),
-                    eq(banks.isTest, ctx.user.testMode)
-                ),
-                with: {
-                    accounts: {
-                        with: {
-                            currencyBalances: true
-                        }
-                    }
-                }
-            });
+            const userBanks = await readBankHierarchy(ctx.db, ctx.userId!, ctx.user.testMode);
 
             const accountIds = userBanks.flatMap(b => b.accounts.map(a => a.id));
 

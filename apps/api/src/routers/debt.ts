@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ownedActiveDebts } from '../lib/household/finance-reads';
 import { eq, desc, sql, and, lt, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../lib/trpc';
@@ -25,11 +26,7 @@ export const debtRouter = router({
 
             // Need to fetch debts and total
             const items = await ctx.db.query.debts.findMany({
-                where: and(
-                    eq(debts.userId, ctx.userId!),
-                    eq(debts.isTest, ctx.user.testMode),
-                    eq(debts.lifecycleStatus, 'active')
-                ),
+                where: ownedActiveDebts(ctx.userId!, ctx.user.testMode),
                 orderBy: [desc(debts.createdAt)],
                 with: {
                     linkedUser: {
