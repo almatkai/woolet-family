@@ -99,7 +99,7 @@ body.dashboard-interacting, body.dashboard-interacting * {
 }
 .layout.is-editing .dashboard-widget { pointer-events: none; }
 .layout.is-editing .react-grid-item.resizing,
-.layout.is-editing .react-grid-item.react-draggable-dragging { z-index: 60 !important; }
+.layout.is-editing .react-grid-item.react-draggable-dragging { z-index: 44 !important; }
 
 /* One measured grid, shared by the drop target, resize bounds and edit guide. */
 .layout.is-editing {
