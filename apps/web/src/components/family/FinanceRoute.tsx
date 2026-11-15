@@ -1,3 +1,4 @@
+import { FamilyHome } from './FamilyHome';
 import type { ComponentType } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ export function FinanceRoute({
             <Personal />
         );
     if (!family) return null;
+    if (title === 'Dashboard') return <FamilyHome family={family} />;
     const members = family.members
         .filter((member) => visibleFamilyMember(family.me, member))
         .sort(

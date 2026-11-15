@@ -208,7 +208,35 @@ function ComingSoonCrypto() {
 // Define routes
 export const rootRoute = createRootRoute({
     component: RootLayout,
-    validateSearch: (s: Record<string, unknown>): { view?: 'personal' } => ({ view: s.view === 'personal' ? 'personal' : undefined }),
+    validateSearch: (
+        s: Record<string, unknown>,
+    ): {
+        view?: 'personal';
+        month?: string;
+        currency?: string;
+        member?: string;
+        category?: string;
+    } => ({
+        view: s.view === 'personal' ? ('personal' as const) : undefined,
+        month:
+            typeof s.month === 'string' &&
+            /^\d{4}-(0[1-9]|1[0-2])$/.test(s.month)
+                ? s.month
+                : undefined,
+        currency:
+            typeof s.currency === 'string' && /^[A-Z]{3}$/.test(s.currency)
+                ? s.currency
+                : undefined,
+        member:
+            typeof s.member === 'string' && /^[0-9a-f-]{36}$/i.test(s.member)
+                ? s.member
+                : undefined,
+        category:
+            typeof s.category === 'string' &&
+            (s.category === 'none' || /^[0-9a-f-]{36}$/i.test(s.category))
+                ? s.category
+                : undefined,
+    }),
     search: { middlewares: [retainSearchParams(['view'])] },
 });
 
