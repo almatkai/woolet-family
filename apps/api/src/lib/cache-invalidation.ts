@@ -13,5 +13,6 @@ export async function invalidateCurrencyRateCaches() {
     await Promise.all([
         cache.invalidatePattern(`${CACHE_KEYS.CURRENCY_RATES}:*`),
         cache.invalidatePattern(CACHE_KEYS.exchangeRatePattern()),
+        cache.invalidatePattern('dashboard:*'),
     ]);
 }

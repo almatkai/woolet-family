@@ -1,6 +1,5 @@
 import { useWidgetLayout } from '@/components/dashboard/WidgetViewport';
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -13,69 +12,21 @@ interface AccountBalance {
     accountId: string;
     accountName: string;
     bankName: string;
-    balances: Array<{
-        currencyCode: string;
-        balance: number;
-    }>;
     totalBalance: number;
 }
 
 type GridParams = { w: number; h: number; breakpoint?: string };
 
 export function TotalBalanceWidget({ gridParams }: { gridParams?: GridParams }) {
-    const { data: hierarchy, isLoading } = trpc.bank.getHierarchy.useQuery();
-
+    const { data: summary, isLoading } = trpc.dashboard.getSummary.useQuery();
     const layout = useWidgetLayout(gridParams);
-    const { isNarrow, isShort, isCompact, isTall, isSmallBp, rowLimit } = layout;
-
-    // Process hierarchy into account balances sorted by total balance desc
-    const accounts: AccountBalance[] = React.useMemo(() => {
-        if (!hierarchy) return [];
-
-        const result: AccountBalance[] = [];
-
-        hierarchy.forEach((bank: any) => {
-            bank.accounts.forEach((account: any) => {
-                const balances = account.currencyBalances.map((cb: any) => ({
-                    currencyCode: cb.currencyCode,
-                    balance: Number(cb.balance)
-                }));
-
-                const totalBalance = balances.reduce((sum: number, b: { balance: number }) => sum + b.balance, 0);
-
-                result.push({
-                    accountId: account.id,
-                    accountName: account.name,
-                    bankName: bank.name,
-                    balances,
-                    totalBalance
-                });
-            });
-        });
-
-        // Sort by total balance descending
-        return result.sort((a, b) => b.totalBalance - a.totalBalance);
-    }, [hierarchy]);
-
-    // Calculate totals by currency
-    const totalsByCurrency: Record<string, number> = React.useMemo(() => {
-        const totals: Record<string, number> = {};
-        accounts.forEach(acc => {
-            acc.balances.forEach(b => {
-                totals[b.currencyCode] = (totals[b.currencyCode] || 0) + b.balance;
-            });
-        });
-        return totals;
-    }, [accounts]);
-
-    const totalAccounts = accounts.length;
-    const currencyCount = Object.keys(totalsByCurrency).length;
+    const { isNarrow, isCompact, rowLimit } = layout;
+    const accounts: AccountBalance[] = summary?.accounts ?? [];
+    const totalAccounts = summary?.accountCount ?? 0;
+    const currencyCount = Object.keys(summary?.totalBalances ?? {}).length;
     const visibleAccounts = accounts.slice(0, rowLimit);
-
-    // Get primary display value
-    const activeBalances = Object.entries(totalsByCurrency).filter(([_, amount]) => amount !== 0);
-    const primaryCurrency = activeBalances.length > 0 ? activeBalances[0][0] : 'KZT';
-    const primaryAmount = activeBalances.length > 0 ? activeBalances[0][1] : 0;
+    const primaryCurrency = summary?.currency;
+    const primaryAmount = summary?.totalBalance ?? 0;
 
     if (isLoading) {
         return (
@@ -111,12 +62,12 @@ export function TotalBalanceWidget({ gridParams }: { gridParams?: GridParams }) 
 
                     <div className="mt-1 flex items-baseline gap-2">
                         <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]" data-widget-value>
-                            <CurrencyDisplay amount={primaryAmount} currency={primaryCurrency} abbreviate={isNarrow || (primaryAmount > 1000000)} />
+                            {summary ? <CurrencyDisplay amount={primaryAmount} currency={primaryCurrency} abbreviate={isNarrow || (primaryAmount > 1000000)} /> : '—'}
                         </span>
                     </div>
 
                     <p data-widget-secondary className="text-[11px] text-purple-200/70 mt-0.5 font-medium">
-                        Across {totalAccounts} accounts
+                        {summary ? `Across ${totalAccounts} accounts` : 'Totals unavailable'}
                     </p>
                 </div>
 
@@ -138,7 +89,7 @@ export function TotalBalanceWidget({ gridParams }: { gridParams?: GridParams }) 
                                     </div>
                                 </div>
                                 <span className="text-[11px] font-bold text-white tabular-nums shrink-0">
-                                    <CurrencyDisplay amount={account.totalBalance} abbreviate />
+                                    <CurrencyDisplay amount={account.totalBalance} currency={primaryCurrency} abbreviate />
                                 </span>
                             </div>
                         ))}

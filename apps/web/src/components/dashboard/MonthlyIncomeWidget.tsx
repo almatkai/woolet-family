@@ -1,89 +1,26 @@
 import { useWidgetLayout } from '@/components/dashboard/WidgetViewport';
-import React from 'react';
-import { TrendingUp, ArrowUpRight } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CurrencyDisplay } from '@/components/CurrencyDisplay';
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import { Link } from '@tanstack/react-router';
-import { startOfMonth, subMonths, endOfMonth, format } from 'date-fns';
 import { GlassCard, GlassEdge, MetricAura } from '@/components/ui/glass';
-
-interface Transaction {
-    id: string;
-    amount: string | number;
-    description?: string | null;
-    date: string;
-    type: string;
-    parentTransactionId?: string | null;
-    category?: {
-        name: string;
-        icon: string;
-        type: string;
-    } | null;
-    currencyBalance?: {
-        currencyCode: string;
-    };
-}
 
 type GridParams = { w: number; h: number; breakpoint?: string };
 
 export function MonthlyIncomeWidget({ gridParams }: { gridParams?: GridParams }) {
-    const now = new Date();
-    const currentStart = startOfMonth(now);
-    const prevStart = startOfMonth(subMonths(now, 1));
-    const prevEnd = endOfMonth(prevStart);
-
-    const { data: incomeData, isLoading: isCurrentLoading } = trpc.transaction.list.useQuery({
-        type: 'income',
-        startDate: currentStart.toISOString(),
-        excludeFromStats: false,
-        limit: 100
-    }) as { data: { transactions: Transaction[], total: number } | undefined, isLoading: boolean };
-
-    const { data: prevIncomeData, isLoading: isPrevLoading } = trpc.transaction.list.useQuery({
-        type: 'income',
-        startDate: prevStart.toISOString(),
-        endDate: prevEnd.toISOString(),
-        excludeFromStats: false,
-        limit: 100
-    }) as { data: { transactions: Transaction[], total: number } | undefined, isLoading: boolean };
-
-    const isLoading = isCurrentLoading || isPrevLoading;
-
+    const { data: summary, isLoading } = trpc.dashboard.getSummary.useQuery();
     const layout = useWidgetLayout(gridParams);
-    const { isNarrow, isShort, isCompact, isTall, isSmallBp, rowLimit } = layout;
-
-    const transactions = incomeData?.transactions || [];
-    const totalIncome = transactions.reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0);
-    
-    const prevTransactions = prevIncomeData?.transactions || [];
-    const prevTotalIncome = prevTransactions.reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0);
-    
+    const { isNarrow, isCompact } = layout;
+    const monthly = summary?.monthlyIncome;
+    const totalIncome = monthly?.total ?? 0;
+    const prevTotalIncome = monthly?.previousTotal ?? 0;
+    const count = monthly?.count ?? 0;
+    const chartData = monthly?.chartData ?? [];
     const diff = totalIncome - prevTotalIncome;
     const percentChange = prevTotalIncome > 0 ? (diff / prevTotalIncome) * 100 : 0;
-
-    // Chart data - grouped by day
-    const chartData = React.useMemo(() => {
-        const grouped: Record<string, number> = {};
-        transactions.forEach(t => {
-            const day = t.date.split('T')[0];
-            grouped[day] = (grouped[day] || 0) + Number(t.amount);
-        });
-        
-        const result = [];
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = format(new Date(now.getFullYear(), now.getMonth(), d), 'yyyy-MM-dd');
-            result.push({
-                date: dateStr,
-                amount: grouped[dateStr] || 0
-            });
-            if (d === now.getDate()) break;
-        }
-        return result;
-    }, [transactions, now]);
 
     if (isLoading) {
         return (
@@ -119,7 +56,7 @@ export function MonthlyIncomeWidget({ gridParams }: { gridParams?: GridParams })
 
                     <div className="mt-1 flex items-baseline gap-2">
                         <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-emerald-400 tabular-nums" data-widget-value>
-                            <CurrencyDisplay amount={totalIncome} showSign abbreviate={isNarrow || (totalIncome > 1000000)} />
+                            {summary ? <CurrencyDisplay amount={totalIncome} currency={summary?.currency} showSign abbreviate={isNarrow || (totalIncome > 1000000)} /> : '—'}
                         </span>
                         {prevTotalIncome > 0 && (
                             <span className={cn(
@@ -132,7 +69,7 @@ export function MonthlyIncomeWidget({ gridParams }: { gridParams?: GridParams })
                     </div>
 
                     <p data-widget-secondary className="text-[11px] text-muted-foreground mt-0.5 font-medium">
-                        {transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'} this month
+                        {summary ? `${count} ${count === 1 ? 'transaction' : 'transactions'} this month` : 'Totals unavailable'}
                     </p>
                 </div>
 
