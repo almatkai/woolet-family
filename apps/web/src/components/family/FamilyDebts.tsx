@@ -1,3 +1,4 @@
+import { useSearch } from '@tanstack/react-router';
 import { formatDay } from './formatDay';
 import { FamilyMemberLink } from './FamilyMemberLink';
 import { trpc } from '@/lib/trpc';
@@ -16,7 +17,8 @@ export function FamilyDebts({
 }: {
     family: NonNullable<HouseholdOverview>;
 }) {
-    const query = trpc.household.familyFinances.useQuery({});
+    const search = useSearch({ strict: false });
+    const query = trpc.household.familyFinances.useQuery({ currency: search.currency });
     const data = query.data as FamilyFinancesOutput | undefined;
     const { setView } = useFinanceView();
     return (

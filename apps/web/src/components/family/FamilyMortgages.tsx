@@ -1,3 +1,4 @@
+import { useSearch } from '@tanstack/react-router';
 import { familyPermissions } from './permissions';
 import { trpc } from '@/lib/trpc';
 import { FamilySection, FamilySectionState } from './FamilySectionShared';
@@ -13,7 +14,8 @@ export function FamilyMortgages({
 }: {
     family: NonNullable<HouseholdOverview>;
 }) {
-    const query = trpc.household.familyFinances.useQuery({});
+    const search = useSearch({ strict: false });
+    const query = trpc.household.familyFinances.useQuery({ currency: search.currency });
     const data = query.data as FamilyFinancesOutput | undefined;
     const { setView } = useFinanceView();
     const totals = (members: FamilyFinancesOutput['members']) =>
