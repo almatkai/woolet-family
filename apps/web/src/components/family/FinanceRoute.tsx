@@ -10,7 +10,6 @@ import { FamilyAccounts } from './FamilyAccounts';
 import { FamilyHome } from './FamilyHome';
 import type { ComponentType } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScopeSwitch } from './ScopeSwitch';
 import { useFinanceView } from './useFinanceView';
@@ -33,15 +32,9 @@ export function FinanceRoute({
                 <Skeleton className="h-40" />
             </div>
         );
-    if (query.error)
-        return (
-            <div role="alert">
-                Couldn't load your family.
-                <Button variant="ghost" onClick={() => void query.refetch()}>
-                    Try again
-                </Button>
-            </div>
-        );
+    // If the family can't be loaded, fall back to the personal page (no switch) so
+    // personal finances stay usable for everyone.
+    if (query.error) return <Personal />;
     if (view === 'personal')
         return (
             // Personal pages render <ScopeSwitchRow /> under their own PageHeader.

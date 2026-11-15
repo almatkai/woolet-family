@@ -1,5 +1,4 @@
 import { FamilyMemberLink } from './FamilyMemberLink';
-import { familyTotals } from './familyTotals';
 import { trpc } from '@/lib/trpc';
 import {
     FamilySection,
@@ -44,17 +43,9 @@ export function FamilyDebts({
                         (member) => (
                             <FamilyGroupList key={member.memberId}>
                                 <FamilyGroupHeader
+                                    // No header subtotal here: a member's debts mix what they
+                                    // owe and what they're owed, and those must not be added up.
                                     member={member}
-                                    totals={familyTotals(
-                                        member.debts
-                                            .filter(
-                                                (d) => !d.counterpartyMemberId,
-                                            )
-                                            .map((d) => ({
-                                                currencyCode: d.currencyCode,
-                                                amount: d.remaining,
-                                            })),
-                                    )}
                                     onManage={() => setView('personal')}
                                 />
                                 {!member.debts.some(
