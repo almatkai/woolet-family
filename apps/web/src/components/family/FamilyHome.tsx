@@ -1021,18 +1021,15 @@ export function FamilyHome({
                     </div>
                 </GlassCard>
             </section>
-            {editing &&
-                (baseQuery.error ? (
-                    failure(() => void baseQuery.refetch())
-                ) : base ? (
-                    <FamilyBudgetSheet
-                        family={family}
-                        overview={base}
-                        onClose={() => setEditing(false)}
-                    />
-                ) : (
-                    <Skeleton className="h-20" />
-                ))}
+            {editing && (
+                <FamilyBudgetSheet
+                    family={family}
+                    overview={base}
+                    error={!!baseQuery.error}
+                    onRetry={() => void baseQuery.refetch()}
+                    onClose={() => setEditing(false)}
+                />
+            )}
         </div>
     );
 }

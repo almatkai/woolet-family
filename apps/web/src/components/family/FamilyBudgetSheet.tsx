@@ -25,7 +25,43 @@ import { FamilyMoney, InlineConfirm, Notice, sheetClass } from './shared';
 import { canEditFamilyBudget } from './permissions';
 import type { HouseholdOverview, HouseholdOverviewOutput } from './types';
 
-export function FamilyBudgetSheet({
+export function FamilyBudgetSheet({ family, overview, error, onRetry, onClose }: {
+    family: NonNullable<HouseholdOverview>;
+    overview?: HouseholdOverviewOutput;
+    error: boolean;
+    onRetry: () => void;
+    onClose: () => void;
+}) {
+    const compact = useIsMobile(470);
+    if (overview && !error) return <BudgetEditor family={family} overview={overview} onClose={onClose} />;
+    return (
+        <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
+            <SheetContent side={compact ? 'bottom' : 'right'} className={sheetClass}>
+                <SheetHeader>
+                    <SheetTitle>Family budget</SheetTitle>
+                    <SheetDescription>Monthly spending limits for your family.</SheetDescription>
+                </SheetHeader>
+                <div className="mt-6 space-y-4">
+                    {error ? (
+                        <Notice tone="error">
+                            Couldn't load the family budget.
+                            <Button type="button" onClick={onRetry}>Try again</Button>
+                        </Notice>
+                    ) : (
+                        <div role="status" aria-label="Loading budget" className="animate-pulse space-y-4">
+                            <div className="h-4 w-32 rounded bg-muted" />
+                            <div className="h-10 rounded bg-muted" />
+                            <div className="h-4 w-40 rounded bg-muted" />
+                            <div className="h-10 rounded bg-muted" />
+                        </div>
+                    )}
+                </div>
+            </SheetContent>
+        </Sheet>
+    );
+}
+
+function BudgetEditor({
     family,
     overview,
     onClose,
