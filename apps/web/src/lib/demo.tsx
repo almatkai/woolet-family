@@ -5,8 +5,8 @@ import { trpc } from './trpc';
 
 export type DemoRole = 'owner' | 'partner' | 'child';
 export const demoPeople: { role: DemoRole; name: string; label: string }[] = [
-    { role: 'owner', name: 'Alex', label: 'Owner' },
-    { role: 'partner', name: 'Jordan', label: 'Partner' },
+    { role: 'owner', name: 'Alex', label: 'Dad' },
+    { role: 'partner', name: 'Jordan', label: 'Mom' },
     { role: 'child', name: 'Maya', label: 'Child' },
 ];
 export const familyFocusHiddenPaths = new Set(['/investing', '/financial/credits', '/financial/mortgages', '/financial/deposits', '/tax', '/settings']);

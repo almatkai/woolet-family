@@ -153,23 +153,33 @@ export function FamilyHome({
                     {...{ monthName, date, move, update, currency, overview }}
                 />
             </div>
-            {query.error ? (
-                failure(() => void query.refetch())
-            ) : !overview ? (
-                <Skeleton className="h-40 rounded-[22px]" />
-            ) : (
-                <FamilyBudgetCard
-                    data={{ family, overview, budget, spent, currency, current, day, days, pace, monthName, comparison, previous, date }}
-                    controls={{ expanded, setExpanded, setEditing, money }}
-                />
-            )}
-            {financesQuery.error ? (
-                failure(() => void financesQuery.refetch())
-            ) : !finances ? (
-                <Skeleton className="h-24 rounded-2xl" />
-            ) : (
-                <FamilyPositionCard {...{ finances, total, currency, date }} />
-            )}
+            <div className="grid gap-4 lg:grid-cols-5">
+                <div className="lg:col-span-3">
+                    {query.error ? (
+                        failure(() => void query.refetch())
+                    ) : !overview ? (
+                        <Skeleton className="h-40 rounded-[22px] lg:h-full" />
+                    ) : (
+                        <FamilyBudgetCard
+                            className="h-full"
+                            data={{ family, overview, budget, spent, currency, current, day, days, pace, monthName, comparison, previous, date }}
+                            controls={{ expanded, setExpanded, setEditing, money }}
+                        />
+                    )}
+                </div>
+                <div className="lg:col-span-2">
+                    {financesQuery.error ? (
+                        failure(() => void financesQuery.refetch())
+                    ) : !finances ? (
+                        <Skeleton className="h-40 rounded-[22px] lg:h-full" />
+                    ) : (
+                        <FamilyPositionCard
+                            className="h-full"
+                            {...{ finances, total, currency, date }}
+                        />
+                    )}
+                </div>
+            </div>
             {!query.error && (
                 <div className="grid gap-4 lg:grid-cols-5">
                     <div className="contents lg:block lg:col-span-3 lg:space-y-4">

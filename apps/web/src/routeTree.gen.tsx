@@ -3,6 +3,7 @@ import { FinanceRoute } from '@/components/family/FinanceRoute';
 import { FamilyPage } from './routes/family';
 import { DemoPage } from './routes/demo';
 import { DemoBar } from './components/DemoBar';
+import { headerPillClass } from './lib/header-pill';
 import { FamilyJoinPage } from './routes/family/join';
 import { FamilyWalletPage } from './routes/family/wallet';
 import {
@@ -185,7 +186,7 @@ function RootLayout() {
                                     'max-[470px]:hidden',
                                 )}
                             >
-                                <div className="pointer-events-auto flex h-10 items-center gap-2 rounded-full border border-black/[0.06] bg-white/60 pl-1.5 pr-4 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-white/10 dark:bg-white/[0.035] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                                <div className={cn(headerPillClass, 'shrink-0 pl-1.5 pr-4')}>
                                     <SidebarTrigger className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground" />
                                     <Separator
                                         orientation="vertical"
@@ -195,6 +196,7 @@ function RootLayout() {
                                         {format(new Date(), 'EEEE · MMM d')}
                                     </span>
                                 </div>
+                                <DemoBar placement="header" />
                             </header>
                         )}
                     </SignedIn>
@@ -219,7 +221,7 @@ function RootLayout() {
                                     : 'max-[470px]:pb-[calc(6rem+env(safe-area-inset-bottom))]'),
                         )}
                     >
-                        {!isAuthRoute && <DemoBar />}
+                        {!isAuthRoute && <DemoBar placement="inline" />}
                         <Outlet />
                     </main>
                 </SidebarInset>

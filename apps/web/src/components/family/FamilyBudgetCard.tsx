@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 import { ArrowDownRight, ArrowUpRight, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,15 +31,16 @@ type BudgetControls = {
     money: (amount: string | number) => ReactNode;
 };
 
-export function FamilyBudgetCard({ data, controls }: {
+export function FamilyBudgetCard({ data, controls, className }: {
     data: BudgetData;
     controls: BudgetControls;
+    className?: string;
 }) {
     const { family, overview, budget, spent, currency, current, day, days, pace, monthName, comparison, previous, date } = data;
     const { expanded, setExpanded, setEditing, money } = controls;
     return (
         <>
-            <GlassCard className="p-5 space-y-4">
+            <GlassCard className={cn('p-5 space-y-4', className)}>
                 <div className="flex items-center justify-between gap-2">
                     <h2 className={sectionLabel}>Family budget</h2>
                     {canEditFamilyBudget(family.me) && (
