@@ -30,6 +30,7 @@ export function FamilyAccounts({
             {data ? (
                 <>
                     <FamilySectionTotal
+                        unconvertedCurrencies={data.unconvertedCurrencies}
                         label="Family balances"
                         totals={data.summary.balances}
                         converted={data.summary.balancesConverted}

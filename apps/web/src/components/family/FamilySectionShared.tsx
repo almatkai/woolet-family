@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { UniversalAddSheet } from '@/components/UniversalAddSheet';
 import { ActionButton } from '@/components/ui/action-button';
 import { ScopeSwitch } from './ScopeSwitch';
-import { MoneyTotals, FamilyMoney } from './shared';
+import { MoneyTotals, FamilyMoney, Notice } from './shared';
 import type { CurrencyAmount, HouseholdOverview } from './types';
 export function FamilySection({
     title,
@@ -70,15 +70,23 @@ export function FamilySectionTotal({
     totals,
     converted,
     currency,
+    unconvertedCurrencies = [],
 }: {
     label: string;
     totals: CurrencyAmount[];
+    unconvertedCurrencies?: string[];
     converted: string;
     currency: string;
 }) {
     return (
         <GlassCard className="p-4 space-y-2">
             <h2 className="text-sm font-semibold">{label}</h2>
+            {!!unconvertedCurrencies.length && (
+                <Notice tone="info">
+                    {unconvertedCurrencies.join(', ')} excluded because no
+                    exchange rate is available.
+                </Notice>
+            )}
             <MoneyTotals
                 totals={totals.map((t) => ({
                     currency: t.currencyCode,

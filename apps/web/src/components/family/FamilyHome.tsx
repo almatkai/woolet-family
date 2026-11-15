@@ -1,3 +1,4 @@
+import { formatDay } from './formatDay';
 import { FamilyMemberLink } from './FamilyMemberLink';
 import { FamilyPeriodControls } from './FamilyPeriodControls';
 import { FamilyLedgerRows } from './FamilyLedgerRows';
@@ -371,7 +372,7 @@ export function FamilyHome({
             )}
             {financesQuery.error ? (
                 failure(() => void financesQuery.refetch())
-            ) : !finances || !total ? (
+            ) : !finances ? (
                 <Skeleton className="h-24 rounded-2xl" />
             ) : (
                 <GlassCard className="p-4">
@@ -379,7 +380,7 @@ export function FamilyHome({
                         {[
                             [
                                 `Income in ${date.toLocaleDateString('en', { month: 'short' })}`,
-                                total.income,
+                                total?.income,
                             ],
                             ['Net worth', finances.summary.balancesConverted],
                             ['Owes', finances.summary.owesConverted],
@@ -393,66 +394,75 @@ export function FamilyHome({
                                     {label}
                                 </dt>
                                 <dd className="text-base font-semibold tabular-nums">
-                                    ≈{' '}
-                                    <FamilyMoney
-                                        amount={amount}
-                                        currency={currency}
-                                        abbreviate
-                                    />
+                                    {amount == null ? (
+                                        '—'
+                                    ) : (
+                                        <>
+                                            ≈{' '}
+                                            <FamilyMoney
+                                                amount={amount}
+                                                currency={currency}
+                                                abbreviate
+                                            />
+                                        </>
+                                    )}
                                 </dd>
                             </div>
                         ))}
                     </dl>
+                    {!!finances.unconvertedCurrencies.length && (
+                        <Notice tone="info">
+                            {finances.unconvertedCurrencies.join(', ')} excluded
+                            because no exchange rate is available.
+                        </Notice>
+                    )}
                 </GlassCard>
             )}
-            <div className="grid gap-4 lg:grid-cols-5">
-                <div className="contents lg:block lg:col-span-3 lg:space-y-4">
-                    <h2 className={sectionLabel}>Who spent what</h2>
-                    {query.error ? (
-                        failure(() => void query.refetch())
-                    ) : !overview ? (
-                        <div className="space-y-2">
-                            {[0, 1, 2].map((n) => (
-                                <Skeleton
-                                    key={n}
-                                    className="h-14 rounded-2xl"
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <GlassCard className="p-2 sm:p-3">
-                            <div className="divide-y divide-border dark:divide-white/[0.06]">
-                                {!members.length && (
-                                    <p className="p-3 text-sm text-muted-foreground">
-                                        No spending in {monthName} yet.
-                                    </p>
-                                )}
-                                {members.map((m) => {
-                                    const detail = overview.members.find(
-                                        (d) => d.memberId === m.memberId,
-                                    );
-                                    const amount = Number(
-                                        m.totals[0]?.amount ?? 0,
-                                    );
-                                    const percent =
-                                        memberTotal > 0
-                                            ? Math.round(
-                                                  (amount / memberTotal) * 100,
-                                              )
-                                            : 0;
-                                    return (
-                                        <div
-                                            key={m.memberId ?? m.status}
-                                            className={`${rowClass} w-full text-left ${search.member === m.memberId ? 'bg-muted dark:bg-white/[0.06]' : ''}`}
-                                        >
+            {!query.error && (
+                <div className="grid gap-4 lg:grid-cols-5">
+                    <div className="contents lg:block lg:col-span-3 lg:space-y-4">
+                        <h2 className={sectionLabel}>Who spent what</h2>
+                        {query.error ? (
+                            failure(() => void query.refetch())
+                        ) : !overview ? (
+                            <div className="space-y-2">
+                                {[0, 1, 2].map((n) => (
+                                    <Skeleton
+                                        key={n}
+                                        className="h-14 rounded-2xl"
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <GlassCard className="p-2 sm:p-3">
+                                <div className="divide-y divide-border dark:divide-white/[0.06]">
+                                    {!members.length && (
+                                        <p className="p-3 text-sm text-muted-foreground">
+                                            No spending in {monthName} yet.
+                                        </p>
+                                    )}
+                                    {members.map((m) => {
+                                        const detail = overview.members.find(
+                                            (d) => d.memberId === m.memberId,
+                                        );
+                                        const amount = Number(
+                                            m.totals[0]?.amount ?? 0,
+                                        );
+                                        const percent =
+                                            memberTotal > 0
+                                                ? Math.round(
+                                                      (amount / memberTotal) *
+                                                          100,
+                                                  )
+                                                : 0;
+                                        return (
                                             <button
                                                 type="button"
-                                                className="min-h-10 px-2 text-xs underline"
-                                                disabled={!m.memberId}
                                                 aria-pressed={
                                                     !!m.memberId &&
                                                     search.member === m.memberId
                                                 }
+                                                disabled={!m.memberId}
                                                 onClick={() =>
                                                     update({
                                                         member:
@@ -463,130 +473,181 @@ export function FamilyHome({
                                                                   undefined),
                                                     })
                                                 }
+                                                key={m.memberId ?? m.status}
+                                                className={`${rowClass} w-full text-left ${search.member === m.memberId ? 'bg-muted dark:bg-white/[0.06]' : ''}`}
                                             >
-                                                Filter
-                                            </button>
-                                            <Initials name={m.name} />
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-semibold truncate">
-                                                    <FamilyMemberLink
-                                                        memberId={m.memberId}
+                                                <Initials name={m.name} />
+                                                <div className="min-w-0 flex-1">
+                                                    <p
+                                                        className={`text-sm truncate ${search.member === m.memberId ? 'font-bold' : 'font-medium'}`}
                                                     >
                                                         {m.name}
-                                                    </FamilyMemberLink>
-                                                    {detail?.isMe && (
-                                                        <span className="text-muted-foreground">
-                                                            {' '}
-                                                            (you)
-                                                        </span>
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {detail
-                                                        ? `${roleLabel(detail.role, detail.isGuardian)}  ${detail.expenseCount} purchases`
-                                                        : m.status === 'former'
-                                                          ? 'Former member'
-                                                          : 'Unassigned'}
-                                                </p>
-                                                <div className="mt-2 h-1.5 rounded-full bg-muted dark:bg-white/[0.08]">
-                                                    <div
-                                                        className="h-full rounded-full bg-foreground/70"
-                                                        style={{
-                                                            width: `${Math.min(100, percent)}%`,
-                                                        }}
-                                                    />
+                                                        {detail?.isMe && (
+                                                            <span className="text-muted-foreground">
+                                                                {' '}
+                                                                (you)
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {detail
+                                                            ? `${roleLabel(detail.role, detail.isGuardian)}  ${detail.expenseCount} purchases`
+                                                            : m.status ===
+                                                                'former'
+                                                              ? 'Former member'
+                                                              : 'Unassigned'}
+                                                    </p>
+                                                    <div className="mt-2 h-1.5 rounded-full bg-muted dark:bg-white/[0.08]">
+                                                        <div
+                                                            className="h-full rounded-full bg-foreground/70"
+                                                            style={{
+                                                                width: `${Math.min(100, percent)}%`,
+                                                            }}
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="pointer-events-none text-right text-sm">
-                                                <FamilyMoney
-                                                    amount={amount}
-                                                    currency={currency}
-                                                />
-                                                <p className="text-xs text-muted-foreground">
-                                                    {percent}%
-                                                </p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            {family.members.length === 1 && (
-                                <p className="p-3 text-xs text-muted-foreground">
-                                    Only you so far.{' '}
-                                    {family.me.canManageMembers && (
-                                        <a href="/family">Invite</a>
-                                    )}
-                                </p>
-                            )}
-                        </GlassCard>
-                    )}
-                    <section className="space-y-3 lg:order-none order-3 lg:col-span-3">
-                        <h2 className={sectionLabel}>Daily spending</h2>
-                        {query.error ? (
-                            failure(() => void query.refetch())
-                        ) : !overview ? (
-                            <Skeleton className="h-40" />
-                        ) : (
-                            <GlassCard className="p-3">
-                                <div className="h-[140px] sm:h-40">
-                                    <ResponsiveContainer
-                                        width="100%"
-                                        height="100%"
-                                    >
-                                        <BarChart
-                                            data={(
-                                                overview.filtered ??
-                                                overview.converted
-                                            ).dailyExpenses.map((d) => ({
-                                                date: d.date,
-                                                amount: Number(
-                                                    d.totals[0]?.amount ?? 0,
-                                                ),
-                                            }))}
+                                                <div className="pointer-events-none text-right text-sm">
+                                                    <FamilyMoney
+                                                        amount={amount}
+                                                        currency={currency}
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {percent}%
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {family.members.length === 1 && (
+                                    <p className="p-3 text-xs text-muted-foreground">
+                                        Only you so far.{' '}
+                                        {family.me.canManageMembers && (
+                                            <Link to="/family">Invite</Link>
+                                        )}
+                                    </p>
+                                )}
+                            </GlassCard>
+                        )}
+                        <section className="space-y-3 lg:order-none order-3 lg:col-span-3">
+                            <h2 className={sectionLabel}>Daily spending</h2>
+                            {query.error ? (
+                                failure(() => void query.refetch())
+                            ) : !overview ? (
+                                <Skeleton className="h-40" />
+                            ) : (
+                                <GlassCard className="p-3">
+                                    <div className="h-[140px] sm:h-40">
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height="100%"
                                         >
-                                            <XAxis
-                                                dataKey="date"
-                                                tickFormatter={(v) =>
-                                                    String(Number(v.slice(-2)))
-                                                }
-                                                interval={4}
-                                                axisLine={false}
-                                                tickLine={false}
-                                            />
-                                            <Tooltip
-                                                content={({
-                                                    active,
-                                                    payload,
-                                                }) =>
-                                                    active && payload?.[0] ? (
-                                                        <div className="bg-popover text-popover-foreground border rounded-xl px-3 py-2 text-xs">
-                                                            <p>
-                                                                {new Date(
-                                                                    `${payload[0].payload.date}T12:00:00`,
-                                                                ).toLocaleDateString(
-                                                                    'en',
-                                                                    {
-                                                                        month: 'short',
-                                                                        day: 'numeric',
-                                                                    },
-                                                                )}
-                                                            </p>
-                                                            <FamilyMoney
-                                                                amount={Number(
-                                                                    payload[0]
-                                                                        .value,
-                                                                )}
-                                                                currency={
-                                                                    currency
-                                                                }
-                                                            />
-                                                        </div>
-                                                    ) : null
-                                                }
-                                            />
-                                            <Bar
-                                                dataKey="amount"
-                                                onClick={(d) =>
+                                            <BarChart
+                                                data={(
+                                                    overview.filtered ??
+                                                    overview.converted
+                                                ).dailyExpenses.map((d) => ({
+                                                    date: d.date,
+                                                    amount: Number(
+                                                        d.totals[0]?.amount ??
+                                                            0,
+                                                    ),
+                                                }))}
+                                            >
+                                                <XAxis
+                                                    dataKey="date"
+                                                    tickFormatter={(v) =>
+                                                        String(
+                                                            Number(v.slice(-2)),
+                                                        )
+                                                    }
+                                                    interval={4}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                />
+                                                <Tooltip
+                                                    content={({
+                                                        active,
+                                                        payload,
+                                                    }) =>
+                                                        active &&
+                                                        payload?.[0] ? (
+                                                            <div className="bg-popover text-popover-foreground border rounded-xl px-3 py-2 text-xs">
+                                                                <p>
+                                                                    {new Date(
+                                                                        `${payload[0].payload.date}T12:00:00`,
+                                                                    ).toLocaleDateString(
+                                                                        'en',
+                                                                        {
+                                                                            month: 'short',
+                                                                            day: 'numeric',
+                                                                        },
+                                                                    )}
+                                                                </p>
+                                                                <FamilyMoney
+                                                                    amount={Number(
+                                                                        payload[0]
+                                                                            .value,
+                                                                    )}
+                                                                    currency={
+                                                                        currency
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        ) : null
+                                                    }
+                                                />
+                                                <Bar
+                                                    dataKey="amount"
+                                                    onClick={(d) =>
+                                                        update({
+                                                            day:
+                                                                search.day ===
+                                                                d.date
+                                                                    ? undefined
+                                                                    : d.date,
+                                                        })
+                                                    }
+                                                >
+                                                    {(
+                                                        overview.filtered ??
+                                                        overview.converted
+                                                    ).dailyExpenses.map((d) => (
+                                                        <Cell
+                                                            key={d.date}
+                                                            fill={
+                                                                d.date ===
+                                                                    today ||
+                                                                d.date ===
+                                                                    search.day
+                                                                    ? 'hsl(var(--foreground))'
+                                                                    : 'hsl(var(--muted-foreground))'
+                                                            }
+                                                            fillOpacity={
+                                                                search.day
+                                                                    ? d.date ===
+                                                                      search.day
+                                                                        ? 1
+                                                                        : 0.2
+                                                                    : d.date ===
+                                                                        today
+                                                                      ? 1
+                                                                      : 0.35
+                                                            }
+                                                        />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <div className="sr-only">
+                                        {(
+                                            overview.filtered ??
+                                            overview.converted
+                                        ).dailyExpenses.map((d) => (
+                                            <button
+                                                key={d.date}
+                                                onClick={() =>
                                                     update({
                                                         day:
                                                             search.day ===
@@ -596,160 +657,116 @@ export function FamilyHome({
                                                     })
                                                 }
                                             >
-                                                {(
-                                                    overview.filtered ??
-                                                    overview.converted
-                                                ).dailyExpenses.map((d) => (
-                                                    <Cell
-                                                        key={d.date}
-                                                        fill={
-                                                            d.date === today ||
-                                                            d.date ===
-                                                                search.day
-                                                                ? 'hsl(var(--foreground))'
-                                                                : 'hsl(var(--muted-foreground))'
-                                                        }
-                                                        fillOpacity={
-                                                            search.day
-                                                                ? d.date ===
-                                                                  search.day
-                                                                    ? 1
-                                                                    : 0.2
-                                                                : d.date ===
-                                                                    today
-                                                                  ? 1
-                                                                  : 0.35
-                                                        }
-                                                    />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                                <div className="sr-only">
+                                                {d.date}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </GlassCard>
+                            )}
+                        </section>
+                    </div>
+                    <section className="order-2 lg:order-none lg:col-span-2 space-y-3">
+                        <h2 className={sectionLabel}>Where it went</h2>
+                        {query.error ? (
+                            failure(() => void query.refetch())
+                        ) : !overview ? (
+                            <Skeleton className="h-56" />
+                        ) : (
+                            <GlassCard className="p-2 sm:p-3">
+                                <div className="divide-y divide-border dark:divide-white/[0.06]">
+                                    {!(overview.filtered ?? overview.converted)
+                                        .categories.length && (
+                                        <p className="p-3 text-sm text-muted-foreground">
+                                            No spending in {monthName} yet.
+                                        </p>
+                                    )}
                                     {(
                                         overview.filtered ?? overview.converted
-                                    ).dailyExpenses.map((d) => (
-                                        <button
-                                            key={d.date}
-                                            onClick={() =>
-                                                update({
-                                                    day:
-                                                        search.day === d.date
-                                                            ? undefined
-                                                            : d.date,
-                                                })
-                                            }
-                                        >
-                                            {d.date}
-                                        </button>
-                                    ))}
+                                    ).categories
+                                        .slice(0, allCategories ? undefined : 6)
+                                        .map((c) => {
+                                            const id = c.categoryId ?? 'none';
+                                            const budget =
+                                                overview.categoryBudgets.find(
+                                                    (b) => b.categoryId === id,
+                                                );
+                                            const amount =
+                                                c.totals[0]?.amount ?? '0';
+                                            return (
+                                                <button
+                                                    key={id}
+                                                    aria-pressed={
+                                                        search.category === id
+                                                    }
+                                                    onClick={() =>
+                                                        update({
+                                                            category:
+                                                                search.category ===
+                                                                id
+                                                                    ? undefined
+                                                                    : id,
+                                                        })
+                                                    }
+                                                    className={`${rowClass} w-full text-left ${search.category === id ? 'bg-muted dark:bg-white/[0.06]' : ''}`}
+                                                >
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold">
+                                                            {c.categoryName}
+                                                        </p>
+                                                        {budget && (
+                                                            <LimitBar
+                                                                spent={Number(
+                                                                    amount,
+                                                                )}
+                                                                limit={Number(
+                                                                    budget.amount,
+                                                                )}
+                                                                size="md"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <span className="pointer-events-none text-sm">
+                                                        <FamilyMoney
+                                                            amount={amount}
+                                                            currency={currency}
+                                                        />
+                                                        {budget && (
+                                                            <>
+                                                                {' '}
+                                                                of{' '}
+                                                                <FamilyMoney
+                                                                    amount={
+                                                                        budget.amount
+                                                                    }
+                                                                    currency={
+                                                                        currency
+                                                                    }
+                                                                />
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
                                 </div>
+                                {(overview.filtered ?? overview.converted)
+                                    .categories.length > 6 && (
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() =>
+                                            setAllCategories(!allCategories)
+                                        }
+                                    >
+                                        {allCategories
+                                            ? 'Show less'
+                                            : `Show all ${(overview.filtered ?? overview.converted).categories.length}`}
+                                    </Button>
+                                )}
                             </GlassCard>
                         )}
                     </section>
                 </div>
-                <section className="order-2 lg:order-none lg:col-span-2 space-y-3">
-                    <h2 className={sectionLabel}>Where it went</h2>
-                    {query.error ? (
-                        failure(() => void query.refetch())
-                    ) : !overview ? (
-                        <Skeleton className="h-56" />
-                    ) : (
-                        <GlassCard className="p-2 sm:p-3">
-                            <div className="divide-y divide-border dark:divide-white/[0.06]">
-                                {!(overview.filtered ?? overview.converted)
-                                    .categories.length && (
-                                    <p className="p-3 text-sm text-muted-foreground">
-                                        No spending in {monthName} yet.
-                                    </p>
-                                )}
-                                {(
-                                    overview.filtered ?? overview.converted
-                                ).categories
-                                    .slice(0, allCategories ? undefined : 6)
-                                    .map((c) => {
-                                        const id = c.categoryId ?? 'none';
-                                        const budget =
-                                            overview.categoryBudgets.find(
-                                                (b) => b.categoryId === id,
-                                            );
-                                        const amount =
-                                            c.totals[0]?.amount ?? '0';
-                                        return (
-                                            <button
-                                                key={id}
-                                                aria-pressed={
-                                                    search.category === id
-                                                }
-                                                onClick={() =>
-                                                    update({
-                                                        category:
-                                                            search.category ===
-                                                            id
-                                                                ? undefined
-                                                                : id,
-                                                    })
-                                                }
-                                                className={`${rowClass} w-full text-left ${search.category === id ? 'bg-muted dark:bg-white/[0.06]' : ''}`}
-                                            >
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-semibold">
-                                                        {c.categoryName}
-                                                    </p>
-                                                    {budget && (
-                                                        <LimitBar
-                                                            spent={Number(
-                                                                amount,
-                                                            )}
-                                                            limit={Number(
-                                                                budget.amount,
-                                                            )}
-                                                            size="md"
-                                                        />
-                                                    )}
-                                                </div>
-                                                <span className="pointer-events-none text-sm">
-                                                    <FamilyMoney
-                                                        amount={amount}
-                                                        currency={currency}
-                                                    />
-                                                    {budget && (
-                                                        <>
-                                                            {' '}
-                                                            of{' '}
-                                                            <FamilyMoney
-                                                                amount={
-                                                                    budget.amount
-                                                                }
-                                                                currency={
-                                                                    currency
-                                                                }
-                                                            />
-                                                        </>
-                                                    )}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                            </div>
-                            {(overview.filtered ?? overview.converted)
-                                .categories.length > 6 && (
-                                <Button
-                                    variant="ghost"
-                                    onClick={() =>
-                                        setAllCategories(!allCategories)
-                                    }
-                                >
-                                    {allCategories
-                                        ? 'Show less'
-                                        : `Show all ${(overview.filtered ?? overview.converted).categories.length}`}
-                                </Button>
-                            )}
-                        </GlassCard>
-                    )}
-                </section>
-            </div>
+            )}
             <section className="space-y-3">
                 {(search.member || search.category || search.day) && (
                     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -765,7 +782,7 @@ export function FamilyHome({
                                     (c.categoryId ?? 'none') ===
                                     search.category,
                             )?.categoryName,
-                            search.day,
+                            search.day ? formatDay(search.day) : undefined,
                         ]
                             .filter(Boolean)
                             .join(', ')}
@@ -785,33 +802,40 @@ export function FamilyHome({
                         {overview?.members.find(
                             (m) => m.memberId === search.member,
                         )?.canOpen && (
-                            <a
-                                href={`/family/members/${search.member}?month=${month}`}
-                            >
-                                Open{' '}
-                                {
-                                    overview.members.find(
-                                        (m) => m.memberId === search.member,
-                                    )?.name
-                                }
-                                's finances
-                            </a>
+                            <Button asChild variant="ghost" size="sm">
+                                <Link
+                                    to="/family/members/$memberId"
+                                    params={{ memberId: search.member! }}
+                                    search={{ month }}
+                                >
+                                    Open{' '}
+                                    {
+                                        overview.members.find(
+                                            (m) => m.memberId === search.member,
+                                        )?.name
+                                    }
+                                    's finances
+                                </Link>
+                            </Button>
                         )}
                     </div>
                 )}
                 <div className="flex items-center justify-between">
                     <h2 className={sectionLabel}>Recent spending</h2>
-                    <Link
-                        to="/spending"
-                        search={{
-                            month,
-                            member: search.member,
-                            category: search.category,
-                            currency: search.currency,
-                        }}
-                    >
-                        All in Spending
-                    </Link>
+                    <Button asChild variant="ghost" size="sm">
+                        {' '}
+                        <Link
+                            to="/spending"
+                            search={{
+                                month,
+                                member: search.member,
+                                category: search.category,
+                                currency: search.currency,
+                            }}
+                        >
+                            All in Spending
+                        </Link>
+                    </Button>
                 </div>
                 {transactions.error ? (
                     failure(() => void transactions.refetch())
