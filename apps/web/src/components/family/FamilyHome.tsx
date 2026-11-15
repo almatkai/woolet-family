@@ -169,10 +169,10 @@ export function FamilyHome({
             {!query.error && (
                 <div className="grid gap-4 lg:grid-cols-5">
                     <div className="contents lg:block lg:col-span-3 lg:space-y-4">
-                        <FamilyWhoSpent {...{ overview, members, memberTotal, monthName, search, update, currency, family }} />
+                        {memberOverview.error ? failure(() => void memberOverview.refetch()) : <FamilyWhoSpent {...{ members, memberTotal, monthName, search, update, currency, family }} overview={memberOverview.data} />}
                         <FamilyDailySpending {...{ overview, search, update, today, currency, money }} />
                     </div>
-                        <FamilyWhereItWent {...{ overview, categoryOverview, categoryData, allCategories, setAllCategories, search, update, currency, monthName }} />
+                        <FamilyWhereItWent {...{ overview, categoryOverview, categoryData, allCategories, setAllCategories, search, update, currency, monthName, failure }} />
                 </div>
             )}
                         <FamilyRecentSpending {...{ search, update, overview, month, monthName, transactions, failure }} />

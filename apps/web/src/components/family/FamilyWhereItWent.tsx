@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/ui/glass';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,6 +8,7 @@ import type { HouseholdOverviewOutput } from './types';
 export function FamilyWhereItWent({
     overview,
     categoryOverview,
+    failure,
     categoryData,
     allCategories,
     setAllCategories,
@@ -27,7 +29,8 @@ export function FamilyWhereItWent({
         day?: string;
     }) => void;
     overview: HouseholdOverviewOutput | undefined;
-    categoryOverview: { data?: unknown };
+    categoryOverview: { data?: unknown; error: unknown; refetch: () => unknown };
+    failure: (retry: () => void) => ReactNode;
     categoryData: HouseholdOverviewOutput | undefined;
     allCategories: boolean;
     setAllCategories: (value: boolean) => void;
@@ -37,7 +40,9 @@ export function FamilyWhereItWent({
     return (
         <section className="order-2 lg:order-none lg:col-span-2 space-y-3">
             <h2 className={sectionLabel}>Where it went</h2>
-            {!overview || !categoryOverview.data ? (
+            {categoryOverview.error ? (
+                failure(() => void categoryOverview.refetch())
+            ) : !overview || !categoryOverview.data ? (
                 <Skeleton className="h-56" />
             ) : (
                 <GlassCard className="p-2 sm:p-3">

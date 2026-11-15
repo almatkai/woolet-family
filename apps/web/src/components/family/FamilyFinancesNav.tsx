@@ -14,7 +14,6 @@ import {
     Users,
     type LucideIcon,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/ui/glass';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FamilyMoney, rowClass, sectionLabel } from './shared';
@@ -38,7 +37,6 @@ type FinancePath =
     | '/family';
 
 export function FamilyFinancesNav({
-    financesQuery,
     finances,
     overview,
     spent,
@@ -51,7 +49,6 @@ export function FamilyFinancesNav({
     month,
     search,
 }: {
-    financesQuery: { error: unknown; refetch: () => unknown };
     finances: FamilyFinancesOutput | undefined;
     overview: HouseholdOverviewOutput | undefined;
     spent: number;
@@ -70,17 +67,6 @@ export function FamilyFinancesNav({
     return (
         <section className="space-y-3">
             <h2 className={sectionLabel}>Family finances</h2>
-            {!!financesQuery.error && (
-                <p className="text-sm">
-                    Couldn't load the figures.{' '}
-                    <Button
-                        variant="ghost"
-                        onClick={() => void financesQuery.refetch()}
-                    >
-                        Try again
-                    </Button>
-                </p>
-            )}
             <GlassCard className="p-2 sm:p-3">
                 <div className="grid lg:grid-cols-2 divide-y divide-border dark:divide-white/[0.06]">
                     {(
@@ -234,7 +220,7 @@ export function FamilyFinancesNav({
                                         {String(label)}
                                     </p>
                                     <div className="pointer-events-none text-xs text-muted-foreground truncate">
-                                        {figure}
+                                        {figure || '—'}
                                     </div>
                                 </div>
                                 <ChevronRight className="size-4 text-muted-foreground" />
