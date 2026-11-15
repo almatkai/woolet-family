@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import { familyTotals } from './familyTotals';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
@@ -33,14 +33,24 @@ export function FamilyBudgetSheet({ family, overview, error, onRetry, onClose }:
     onClose: () => void;
 }) {
     const compact = useIsMobile(470);
-    if (overview && !error) return <BudgetEditor family={family} overview={overview} onClose={onClose} />;
+    const closeGuard = useRef(() => true);
     return (
-        <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
-            <SheetContent side={compact ? 'bottom' : 'right'} className={sheetClass}>
-                <SheetHeader>
-                    <SheetTitle>Family budget</SheetTitle>
-                    <SheetDescription>Monthly spending limits for your family.</SheetDescription>
-                </SheetHeader>
+        <Sheet open onOpenChange={(open) => { if (!open && closeGuard.current()) onClose(); }}>
+            <SheetContent
+                side={compact ? 'bottom' : 'right'}
+                className={sheetClass}
+                onEscapeKeyDown={(event) => {
+                    if (!closeGuard.current()) event.preventDefault();
+                }}
+            >
+                {overview && !error ? (
+                    <BudgetEditor family={family} overview={overview} onClose={onClose} closeGuard={closeGuard} />
+                ) : (
+                    <>
+                        <SheetHeader>
+                            <SheetTitle>Family budget</SheetTitle>
+                            <SheetDescription>Monthly spending limits for your family.</SheetDescription>
+                        </SheetHeader>
                 <div className="mt-6 space-y-4">
                     {error ? (
                         <Notice tone="error">
@@ -56,6 +66,8 @@ export function FamilyBudgetSheet({ family, overview, error, onRetry, onClose }:
                         </div>
                     )}
                 </div>
+                    </>
+                )}
             </SheetContent>
         </Sheet>
     );
@@ -65,12 +77,13 @@ function BudgetEditor({
     family,
     overview,
     onClose,
+    closeGuard,
 }: {
     family: NonNullable<HouseholdOverview>;
     overview: HouseholdOverviewOutput;
     onClose: () => void;
+    closeGuard: { current: () => boolean };
 }) {
-    const compact = useIsMobile(470);
     const utils = trpc.useContext();
     const categoriesQuery = trpc.category.list.useQuery();
     const categories = (
@@ -94,6 +107,7 @@ function BudgetEditor({
     const [error, setError] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [confirm, setConfirm] = useState(false);
+    closeGuard.current = () => !busy && !confirm;
     const setBudget = trpc.household.setBudget.useMutation();
     const deleteBudget = trpc.household.deleteBudget.useMutation();
     const valid = (v: string) =>
@@ -171,19 +185,7 @@ function BudgetEditor({
     const previous = new Date(`${overview.converted.month}-01T12:00:00`);
     previous.setMonth(previous.getMonth() - 1);
     return (
-        <Sheet
-            open
-            onOpenChange={(open) => {
-                if (!open && !busy && !confirm) onClose();
-            }}
-        >
-            <SheetContent
-                side={compact ? 'bottom' : 'right'}
-                className={sheetClass}
-                onEscapeKeyDown={(e) => {
-                    if (confirm || busy) e.preventDefault();
-                }}
-            >
+        <>
                 <SheetHeader>
                     <SheetTitle>Family budget</SheetTitle>
                     <SheetDescription>
@@ -402,7 +404,6 @@ function BudgetEditor({
                         {busy ? 'Saving...' : 'Save budget'}
                     </Button>
                 </form>
-            </SheetContent>
-        </Sheet>
+        </>
     );
 }
