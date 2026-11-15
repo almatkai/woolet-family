@@ -1,3 +1,4 @@
+import { FamilyMemberLink } from './FamilyMemberLink';
 import type { FamilyWalletsResponse } from './types';
 import { Link } from '@tanstack/react-router';
 import { trpc } from '@/lib/trpc';
@@ -37,7 +38,11 @@ export function FamilyGroupHeader({
         <div className="flex flex-wrap items-center gap-3 py-3">
             <Initials name={member.name} />
             <div>
-                <p className="text-sm font-semibold">{member.name}</p>
+                <p className="text-sm font-semibold">
+                    <FamilyMemberLink memberId={member.memberId}>
+                        {member.name}
+                    </FamilyMemberLink>
+                </p>
                 <p className="text-xs text-muted-foreground">
                     {roleLabel(member.role, member.isGuardian).replace(
                         ' · ',

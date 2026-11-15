@@ -1,3 +1,4 @@
+import { FamilyMemberLink } from './FamilyMemberLink';
 import { Link } from '@tanstack/react-router';
 import { Receipt } from 'lucide-react';
 import { FamilyMoney, rowClass } from './shared';
@@ -20,9 +21,14 @@ export function FamilyLedgerRows({ items }: { items: FamilyLedgerItem[] }) {
                                 </p>
                                 <p className="text-xs text-muted-foreground flex gap-x-2 min-w-0">
                                     <span className="text-foreground/80">
-                                        {t.spender?.isMe
-                                            ? 'You'
-                                            : (t.spender?.name ?? 'Unassigned')}
+                                        <FamilyMemberLink
+                                            memberId={t.spender?.memberId}
+                                        >
+                                            {t.spender?.isMe
+                                                ? 'You'
+                                                : (t.spender?.name ??
+                                                  'Unassigned')}
+                                        </FamilyMemberLink>
                                     </span>
                                     <span className="truncate">
                                         {t.place.kind === 'wallet'
@@ -34,7 +40,12 @@ export function FamilyLedgerRows({ items }: { items: FamilyLedgerItem[] }) {
                                     t.author.memberId !==
                                         t.spender?.memberId && (
                                         <p className="text-xs text-muted-foreground truncate">
-                                            Added by {t.author.name}
+                                            Added by{' '}
+                                            <FamilyMemberLink
+                                                memberId={t.author.memberId}
+                                            >
+                                                {t.author.name}
+                                            </FamilyMemberLink>
                                         </p>
                                     )}
                             </div>
@@ -56,19 +67,18 @@ export function FamilyLedgerRows({ items }: { items: FamilyLedgerItem[] }) {
                                     {t.date}
                                 </h3>
                             )}
-                            {t.place.kind === 'wallet' ? (
-                                <Link
-                                    className={rowClass}
-                                    to="/family/wallets/$walletId"
-                                    params={{
-                                        walletId: t.place.walletId,
-                                    }}
-                                >
-                                    {content}
-                                </Link>
-                            ) : (
-                                <div className={rowClass}>{content}</div>
-                            )}
+                            <div className={rowClass}>
+                                {content}
+                                {t.place.kind === 'wallet' && (
+                                    <Link
+                                        className="text-xs underline"
+                                        to="/family/wallets/$walletId"
+                                        params={{ walletId: t.place.walletId }}
+                                    >
+                                        Open wallet
+                                    </Link>
+                                )}
+                            </div>
                         </div>
                     );
                 },

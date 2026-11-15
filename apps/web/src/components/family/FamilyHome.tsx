@@ -1,3 +1,4 @@
+import { FamilyMemberLink } from './FamilyMemberLink';
 import { FamilyPeriodControls } from './FamilyPeriodControls';
 import { FamilyLedgerRows } from './FamilyLedgerRows';
 import {
@@ -440,29 +441,39 @@ export function FamilyHome({
                                               )
                                             : 0;
                                     return (
-                                        <button
+                                        <div
                                             key={m.memberId ?? m.status}
-                                            disabled={!m.memberId}
-                                            aria-pressed={
-                                                !!m.memberId &&
-                                                search.member === m.memberId
-                                            }
-                                            onClick={() =>
-                                                update({
-                                                    member:
-                                                        search.member ===
-                                                        m.memberId
-                                                            ? undefined
-                                                            : (m.memberId ??
-                                                              undefined),
-                                                })
-                                            }
                                             className={`${rowClass} w-full text-left ${search.member === m.memberId ? 'bg-muted dark:bg-white/[0.06]' : ''}`}
                                         >
+                                            <button
+                                                type="button"
+                                                className="min-h-10 px-2 text-xs underline"
+                                                disabled={!m.memberId}
+                                                aria-pressed={
+                                                    !!m.memberId &&
+                                                    search.member === m.memberId
+                                                }
+                                                onClick={() =>
+                                                    update({
+                                                        member:
+                                                            search.member ===
+                                                            m.memberId
+                                                                ? undefined
+                                                                : (m.memberId ??
+                                                                  undefined),
+                                                    })
+                                                }
+                                            >
+                                                Filter
+                                            </button>
                                             <Initials name={m.name} />
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-semibold truncate">
-                                                    {m.name}
+                                                    <FamilyMemberLink
+                                                        memberId={m.memberId}
+                                                    >
+                                                        {m.name}
+                                                    </FamilyMemberLink>
                                                     {detail?.isMe && (
                                                         <span className="text-muted-foreground">
                                                             {' '}
@@ -495,7 +506,7 @@ export function FamilyHome({
                                                     {percent}%
                                                 </p>
                                             </div>
-                                        </button>
+                                        </div>
                                     );
                                 })}
                             </div>

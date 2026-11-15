@@ -1,3 +1,4 @@
+import { familyPermissions } from './permissions';
 import { trpc } from '@/lib/trpc';
 import { FamilySection, FamilySectionState } from './FamilySectionShared';
 import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
@@ -66,7 +67,7 @@ export function FamilyMortgages({
                         (member) => member.mortgages.length,
                     ) && (
                         <p className="text-sm text-muted-foreground">
-                            No one in the family has added a mortgage.
+                            No one in the family has added a mortgage.{' '}{familyPermissions(family.me).isOwner && 'Add one in Personal view.'}
                         </p>
                     )}
                     {orderFamilyMembers(family.me, data.members).map(

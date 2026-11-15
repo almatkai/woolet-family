@@ -1,3 +1,4 @@
+import { familyPermissions } from './permissions';
 import { trpc } from '@/lib/trpc';
 import { FamilySection, FamilySectionState } from './FamilySectionShared';
 import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
@@ -64,7 +65,7 @@ export function FamilyCredits({
                     </FamilyGroupList>
                     {!data.members.some((member) => member.credits.length) && (
                         <p className="text-sm text-muted-foreground">
-                            No one in the family has added a credit.
+                            No one in the family has added a credit.{' '}{familyPermissions(family.me).isOwner && 'Add one in Personal view.'}
                         </p>
                     )}
                     {orderFamilyMembers(family.me, data.members).map(
