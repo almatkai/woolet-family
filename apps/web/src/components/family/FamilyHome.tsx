@@ -120,6 +120,23 @@ export function FamilyHome({
         (overview?.filtered ?? overview?.converted)?.currencies[0]?.expense ??
             0,
     );
+    if (query.error) {
+        return (
+            <div className="space-y-4 md:space-y-6">
+                <PageHeader
+                    title="Dashboard"
+                    subtitle={family.household.name}
+                    variant="one"
+                >
+                    <UniversalAddSheet
+                        trigger={<ActionButton>+ Add</ActionButton>}
+                    />
+                </PageHeader>
+                <ScopeSwitch />
+                {failure(() => void query.refetch())}
+            </div>
+        );
+    }
     return (
         <div className="space-y-4 md:space-y-6">
             <PageHeader
