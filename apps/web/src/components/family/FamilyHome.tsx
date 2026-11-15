@@ -164,7 +164,9 @@ export function FamilyHome({
             </PageHeader>
             <div className="flex flex-wrap items-center gap-2">
                 <ScopeSwitch />
-                <FamilyPeriodControls {...{ monthName, date, move, update, currency, overview }} />
+                <FamilyPeriodControls
+                    {...{ monthName, date, move, update, currency, overview }}
+                />
             </div>
             {query.error ? (
                 failure(() => void query.refetch())

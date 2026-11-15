@@ -53,6 +53,15 @@ export function visibleFamilyMember(
     return member.role !== 'child' || canEditFamilyBudget(me);
 }
 
-export function orderFamilyMembers<T extends { isMe: boolean; role: Role; name: string }>(me: { role: Role; isGuardian: boolean }, members: T[]) {
-    return members.filter(member => visibleFamilyMember(me, member)).sort((a, b) => Number(b.isMe) - Number(a.isMe) || Number(a.role === 'child') - Number(b.role === 'child') || a.name.localeCompare(b.name));
+export function orderFamilyMembers<
+    T extends { isMe: boolean; role: Role; name: string },
+>(me: { role: Role; isGuardian: boolean }, members: T[]) {
+    return members
+        .filter((member) => visibleFamilyMember(me, member))
+        .sort(
+            (a, b) =>
+                Number(b.isMe) - Number(a.isMe) ||
+                Number(a.role === 'child') - Number(b.role === 'child') ||
+                a.name.localeCompare(b.name),
+        );
 }
