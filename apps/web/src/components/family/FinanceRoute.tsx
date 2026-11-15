@@ -9,21 +9,17 @@ import { FamilySpending } from './FamilySpending';
 import { FamilyAccounts } from './FamilyAccounts';
 import { FamilyHome } from './FamilyHome';
 import type { ComponentType } from 'react';
-import { PageHeader } from '@/components/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScopeSwitch } from './ScopeSwitch';
 import { useFinanceView } from './useFinanceView';
-import { visibleFamilyMember } from './permissions';
-import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
 
 export function FinanceRoute({
     personal: Personal,
-    title,
+    section,
 }: {
     personal: ComponentType;
-    title: string;
+    section: 'dashboard' | 'accounts' | 'spending' | 'debts' | 'credits' | 'mortgages' | 'deposits' | 'subscriptions' | 'investing' | 'tax';
 }) {
-    const { view, family, query, setView } = useFinanceView();
+    const { view, family, query } = useFinanceView();
     if (query.isLoading)
         return (
             <div className="space-y-4">
@@ -41,46 +37,16 @@ export function FinanceRoute({
             <Personal />
         );
     if (!family) return null;
-    if (title === 'Dashboard') return <FamilyHome family={family} />;
-    if (title === 'Tax') return <FamilyTax family={family} />;
-    if (title === 'Investing') return <FamilyInvesting family={family} />;
-    if (title === 'Accounts') return <FamilyAccounts family={family} />;
-    if (title === 'Spending') return <FamilySpending family={family} />;
-    if (title === 'Debts') return <FamilyDebts family={family} />;
-    if (title === 'Credits') return <FamilyCredits family={family} />;
-    if (title === 'Mortgages') return <FamilyMortgages family={family} />;
-    if (title === 'Deposits') return <FamilyDeposits family={family} />;
-    if (title === 'Subscriptions')
-        return <FamilySubscriptions family={family} />;
-    const members = family.members
-        .filter((member) => visibleFamilyMember(family.me, member))
-        .sort(
-            (a, b) =>
-                Number(b.id === family.me.id) - Number(a.id === family.me.id) ||
-                Number(a.role === 'child') - Number(b.role === 'child') ||
-                a.name.localeCompare(b.name),
-        );
-    return (
-        <div className="space-y-4 md:space-y-6">
-            <PageHeader
-                title={title}
-                subtitle={family.household.name}
-                variant="one"
-            >
-                {null}
-            </PageHeader>
-            <div className="flex flex-wrap items-center gap-2">
-                <ScopeSwitch />
-            </div>
-            <FamilyGroupList>
-                {members.map((member) => (
-                    <FamilyGroupHeader
-                        key={member.id}
-                        member={{ ...member, isMe: member.id === family.me.id }}
-                        onManage={() => setView('personal')}
-                    />
-                ))}
-            </FamilyGroupList>
-        </div>
-    );
+    switch (section) {
+        case 'dashboard': return <FamilyHome family={family} />;
+        case 'tax': return <FamilyTax family={family} />;
+        case 'investing': return <FamilyInvesting family={family} />;
+        case 'accounts': return <FamilyAccounts family={family} />;
+        case 'spending': return <FamilySpending family={family} />;
+        case 'debts': return <FamilyDebts family={family} />;
+        case 'credits': return <FamilyCredits family={family} />;
+        case 'mortgages': return <FamilyMortgages family={family} />;
+        case 'deposits': return <FamilyDeposits family={family} />;
+        case 'subscriptions': return <FamilySubscriptions family={family} />;
+    }
 }

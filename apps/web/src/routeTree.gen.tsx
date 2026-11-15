@@ -301,66 +301,66 @@ export const rootRoute = createRootRoute({
 export const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
-    component: () => <FinanceRoute personal={Dashboard} title="Dashboard" />,
+    component: () => <FinanceRoute personal={Dashboard} section="dashboard" />,
 });
 
 export const accountsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/accounts',
-    component: () => <FinanceRoute personal={AccountsPage} title="Accounts" />,
+    component: () => <FinanceRoute personal={AccountsPage} section="accounts" />,
 });
 
 export const spendingRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/spending',
-    component: () => <FinanceRoute personal={SpendingPage} title="Spending" />,
+    component: () => <FinanceRoute personal={SpendingPage} section="spending" />,
 });
 
 export const debtsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/debts',
-    component: () => <FinanceRoute personal={DebtsPage} title="Debts" />,
+    component: () => <FinanceRoute personal={DebtsPage} section="debts" />,
 });
 
 export const creditsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/financial/credits',
-    component: () => <FinanceRoute personal={CreditsPage} title="Credits" />,
+    component: () => <FinanceRoute personal={CreditsPage} section="credits" />,
 });
 
 export const mortgagesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/financial/mortgages',
     component: () => (
-        <FinanceRoute personal={MortgagesPage} title="Mortgages" />
+        <FinanceRoute personal={MortgagesPage} section="mortgages" />
     ),
 });
 
 export const depositsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/financial/deposits',
-    component: () => <FinanceRoute personal={DepositsPage} title="Deposits" />,
+    component: () => <FinanceRoute personal={DepositsPage} section="deposits" />,
 });
 
 export const investingRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/investing',
     component: () => (
-        <FinanceRoute personal={InvestingPage} title="Investing" />
+        <FinanceRoute personal={InvestingPage} section="investing" />
     ),
 });
 
 export const taxRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/tax',
-    component: () => <FinanceRoute personal={TaxPage} title="Tax" />,
+    component: () => <FinanceRoute personal={TaxPage} section="tax" />,
 });
 
 export const subscriptionsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/subscriptions',
     component: () => (
-        <FinanceRoute personal={SubscriptionsPage} title="Subscriptions" />
+        <FinanceRoute personal={SubscriptionsPage} section="subscriptions" />
     ),
 });
 
