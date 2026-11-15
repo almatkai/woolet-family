@@ -51,7 +51,7 @@ function setup({ role = 'owner', guardian = false, rates = { USD: 1, EUR: 2 }, e
             const value = () => {
                 if (fields?.membership) return [{ membership: viewer, household: { ownerUserId: 'owner' } }];
                 if (table === householdMembers) { record('members', where); return all; }
-                if (table === familyWalletTransactions) { const q = record('wallets', where); expect(q.params).toEqual([home, '2026-01-01', '2026-02-28']); return wallets; }
+                if (table === familyWalletTransactions) { const q = record('wallets', where); expect(q.params[0]).toBe(home); expect(q.params).toHaveLength(3); return wallets; }
                 if (table === householdBudgets) return [{ budget: { categoryId: null, currencyCode: 'USD', amount: '100.00' }, categoryName: null }, { budget: { categoryId, currencyCode: 'USD', amount: '50.00' }, categoryName: 'Food' }];
                 throw Error('Unexpected table');
             };
@@ -81,7 +81,8 @@ test('adults see live personal money, transfer-free child wallet totals, budgets
 test('non-guardian adult excludes child personal banks but includes child wallet expense', async () => {
     const { caller, reads } = setup({ role: 'adult' });
     const result = await caller.overview({ month: '2026-02' });
-    expect(result.members.map(m => m.memberId)).toEqual(['viewer', 'adult']);
+    expect(result.members.map(m => m.memberId)).toEqual(['viewer', 'adult', 'child']);
+    expect(result.members.find(m => m.memberId === 'child')).toMatchObject({ canOpen: false, netWorth: null, expenseCount: 1 });
     expect(result.converted.currencies[0].expense).toBe('25.00');
     expect(reads.filter(r => r.table === 'banks')).toHaveLength(2);
     expect(result.converted.members.find(m => m.memberId === 'child')?.totals[0].amount).toBe('5.00');
@@ -117,4 +118,50 @@ test('empty overview has a single base currency', async () => {
 });
 for (const month of ['2026-00', '2026-13', '2026-2', 'invalid']) test(`reject invalid month ${month}`, async () => {
     await expect(setup().caller.overview({ month })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+});
+
+test('display currency converts every figure without changing raw totals', async () => {
+    const { caller } = setup({ rates: { EUR: 1, USD: 0.5 } });
+    const result = await caller.overview({ month: '2026-02', currency: 'EUR' });
+    expect(result.displayCurrency).toBe('EUR');
+    expect(result.availableCurrencies).toEqual(['EUR', 'USD']);
+    expect(result.filtered).toBeNull();
+    expect(result.converted.currencies[0]).toMatchObject({ currencyCode: 'EUR', expense: '110.00', budget: '200.00' });
+    expect(result.categoryBudgets[0]).toMatchObject({ amount: '100.00', spent: '110.00' });
+    expect(result.previousMonthExpense).toBe('6.00');
+    expect(result.members.find(m => m.memberId === 'viewer')).toMatchObject({ netWorth: '200.00', expenseCount: 1, transactionsCount: 2, canOpen: true });
+    expect(ratesSpy).toHaveBeenCalledWith('EUR');
+});
+test('filters hidden child amounts without exposing personal banks', async () => {
+    const { caller, wallets, all, reads } = setup({ role: 'adult' });
+    const childId = '33333333-3333-4333-8333-333333333333';
+    all.find(r => r.member.id === 'child')!.member.id = childId;
+    wallets.forEach(r => r.wallet.childMemberId = childId);
+    const result = await caller.overview({ month: '2026-02', memberId: childId, categoryId });
+    expect(result.filtered?.currencies[0].expense).toBe('5.00');
+    expect(result.converted.currencies[0].expense).toBe('25.00');
+    expect(result.members.find(m => m.memberId === childId)).toMatchObject({ canOpen: false, netWorth: null });
+    expect(reads.filter(r => r.table === 'banks')).toHaveLength(2);
+    expect((await caller.overview({ month: '2026-02', categoryId: 'none' })).filtered?.categories).toEqual([]);
+});
+test('current comparison uses matching day count, past comparison uses full month', async () => {
+    const { caller, personal } = setup();
+    personal.push({ ...personal.find(t => t.id === 'previous')!, id: 'late-previous', date: '2026-01-25', amount: '20.00' });
+    const current = await caller.overview({ month: '2026-02', today: '2026-02-15' });
+    expect(current.previousMonthToDateExpense).toBe('3.00');
+    expect(current.previousMonthExpense).toBe('13.00');
+    expect((await caller.overview({ month: '2026-02', today: '2026-03-15' })).previousMonthToDateExpense).toBe('13.00');
+});
+test('rejects invalid currency, member, category and calendar dates', async () => {
+    for (const input of [{ currency: 'ZZZ' }, { memberId: 'child' }, { categoryId: 'food' }, { today: '2026-02-30' }]) {
+        await expect(setup().caller.overview({ month: '2026-02', ...input })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    }
+});
+
+test('month-to-date comparison clamps to February end and handles year boundaries', async () => {
+    const { caller, personal } = setup();
+    personal.push({ ...personal[0], id: 'feb-end', date: '2026-02-28', amount: '7.00' });
+    expect((await caller.overview({ month: '2026-03', today: '2026-03-31' })).previousMonthToDateExpense).toBe('62.00');
+    personal.push({ ...personal[0], id: 'december', date: '2025-12-10', amount: '9.00' });
+    expect((await caller.overview({ month: '2026-01', today: '2026-01-15' })).previousMonthToDateExpense).toBe('9.00');
 });

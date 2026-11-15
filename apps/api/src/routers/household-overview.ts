@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server';
+import { format } from 'date-fns';
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { protectedProcedure } from '../lib/trpc';
@@ -10,16 +11,16 @@ import { buildFamilyOverview, type LedgerRow } from '../lib/household/overview-m
 import { fromCents, periodBounds, toCents } from '../lib/household/limits';
 import { currencyExchangeService } from '../services/currency-exchange-service';
 
-const monthInput = z.string().regex(/^\d{4}-\d{2}$/).refine(month => {
-    try { periodBounds('monthly', `${month}-01`); return month > '0000-01'; } catch { return false; }
-}, 'Invalid month');
+import { categoryInput, currencyInput, dayInput, monthInput } from '../lib/household/query-input';
+
 export const householdOverviewProcedures = {
-    overview: protectedProcedure.input(z.object({ month: monthInput })).query(async ({ ctx, input }) => {
+    overview: protectedProcedure.input(z.object({ month: monthInput, currency: currencyInput.optional(), memberId: z.string().uuid().optional(), categoryId: categoryInput.optional(), today: dayInput.optional() })).query(async ({ ctx, input }) => {
         const viewer = await dashboardMembership(ctx.db, ctx.userId);
         if (viewer.role === 'child') throw new TRPCError({ code: 'FORBIDDEN' });
         const baseCurrency = await householdBaseCurrency(ctx.db, viewer.household.ownerUserId);
-        const rates = await currencyExchangeService.getExchangeRates(baseCurrency);
-        const { convert, missing } = baseConverter(baseCurrency, rates);
+        const displayCurrency = input.currency ?? baseCurrency;
+        const rates = await currencyExchangeService.getExchangeRates(displayCurrency);
+        const { convert, missing } = baseConverter(displayCurrency, rates);
         const { end } = periodBounds('monthly', `${input.month}-01`);
         const previousDate = new Date(`${input.month}-01T00:00:00Z`);
         previousDate.setUTCMonth(previousDate.getUTCMonth() - 1);
@@ -68,14 +69,14 @@ export const householdOverviewProcedures = {
         const convertedRows = rows.flatMap(row => {
             const amount = convert(row.amount, row.currencyCode);
             // A positive foreign amount can round to zero; it contributes no cents.
-            return amount !== null && toCents(amount) > 0 ? [{ ...row, amount, currencyCode: baseCurrency }] : [];
+            return amount !== null && toCents(amount) > 0 ? [{ ...row, amount, currencyCode: displayCurrency }] : [];
         });
         const convertedBudget = totalBudget ? convert(totalBudget.amount, totalBudget.currencyCode) : null;
         const converted = buildFamilyOverview({ month: input.month, transactions: convertedRows, members: names,
-            budgets: convertedBudget === null ? [] : [{ currencyCode: baseCurrency, amount: convertedBudget }] });
+            budgets: convertedBudget === null ? [] : [{ currencyCode: displayCurrency, amount: convertedBudget }] });
         if (!converted.currencies.length) {
-            converted.currencies.push({ currencyCode: baseCurrency, income: '0.00', expense: '0.00', budget: null, remaining: null });
-            for (const day of converted.dailyExpenses) day.totals.push({ currencyCode: baseCurrency, amount: '0.00' });
+            converted.currencies.push({ currencyCode: displayCurrency, income: '0.00', expense: '0.00', budget: null, remaining: null });
+            for (const day of converted.dailyExpenses) day.totals.push({ currencyCode: displayCurrency, amount: '0.00' });
         }
         const categoryBudgets = budgetRows.flatMap(({ budget, categoryName }) => {
             if (budget.categoryId === null) return [];
@@ -83,15 +84,30 @@ export const householdOverviewProcedures = {
             return amount === null ? [] : [{ categoryId: budget.categoryId, categoryName: categoryName ?? 'Unnamed category', amount,
                 spent: converted.categories.find(c => c.categoryId === budget.categoryId)?.totals[0]?.amount ?? '0.00' }];
         });
+        const filtered = input.memberId || input.categoryId ? buildFamilyOverview({
+            month: input.month, members: names,
+            transactions: convertedRows.filter(row => (!input.memberId || row.memberId === input.memberId)
+                && (!input.categoryId || row.categoryId === (input.categoryId === 'none' ? null : input.categoryId))),
+        }) : null;
+        const today = input.today ?? format(new Date(), 'yyyy-MM-dd');
+        const previousEnd = periodBounds('monthly', `${previousMonth}-01`).end;
+        const comparisonEnd = input.month === today.slice(0, 7)
+            ? `${previousMonth}-${String(Math.min(Number(today.slice(-2)), Number(previousEnd.slice(-2)))).padStart(2, '0')}`
+            : previousEnd;
+        const previousToDate = buildFamilyOverview({ month: previousMonth, transactions: convertedRows.filter(row => row.date <= comparisonEnd), members: names });
+        const byCurrency = buildFamilyOverview({ month: input.month, transactions: rows, members: names,
+            budgets: totalBudget ? [{ currencyCode: totalBudget.currencyCode, amount: totalBudget.amount }] : [] });
         const previous = buildFamilyOverview({ month: previousMonth, transactions: convertedRows, members: names });
         return {
-            baseCurrency,
-            byCurrency: buildFamilyOverview({ month: input.month, transactions: rows, members: names,
-                budgets: totalBudget ? [{ currencyCode: totalBudget.currencyCode, amount: totalBudget.amount }] : [] }),
+            baseCurrency, displayCurrency, byCurrency, filtered,
+            availableCurrencies: [...new Set([baseCurrency, ...byCurrency.currencies.map(c => c.currencyCode)])].sort(),
+            previousMonthToDateExpense: previousToDate.currencies[0]?.expense ?? '0.00',
             converted, unconvertedCurrencies: [...missing].sort(), categoryBudgets,
             previousMonthExpense: previous.currencies[0]?.expense ?? '0.00',
-            members: visible.map(({ member }) => ({ memberId: member.id, userId: member.userId, name: nameOf(member.id), role: member.role,
-                isGuardian: member.isGuardian, isMe: member.userId === ctx.userId, netWorth: netWorth.get(member.id) ?? '0.00',
+            members: allMembers.map(({ member }) => ({ memberId: member.id, userId: member.userId, name: nameOf(member.id), role: member.role,
+                isGuardian: member.isGuardian, isMe: member.userId === ctx.userId, canOpen: canViewMemberFinances(viewer, member),
+                netWorth: canViewMemberFinances(viewer, member) ? netWorth.get(member.id) ?? '0.00' : null,
+                expenseCount: rows.filter(r => r.memberId === member.id && r.kind === 'expense' && r.date >= `${input.month}-01` && r.date <= end).length,
                 spent: converted.members.find(m => m.memberId === member.id)?.totals[0]?.amount ?? '0.00',
                 transactionsCount: rows.filter(r => r.memberId === member.id && r.date >= `${input.month}-01` && r.date <= end).length })),
         };
