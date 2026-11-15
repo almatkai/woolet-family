@@ -85,6 +85,8 @@ test('non-guardian adult excludes child personal banks but includes child wallet
     expect(result.converted.currencies[0].expense).toBe('25.00');
     expect(reads.filter(r => r.table === 'banks')).toHaveLength(2);
     expect(result.converted.members.find(m => m.memberId === 'child')?.totals[0].amount).toBe('5.00');
+    // The child is labelled by name, not as a former member, even without guardian access.
+    expect(result.converted.members.find(m => m.memberId === 'child')).toMatchObject({ name: 'child', status: 'active' });
 });
 test('guardian adult sees child banks', async () => {
     expect((await setup({ role: 'adult', guardian: true }).caller.overview({ month: '2026-02' })).members).toHaveLength(3);

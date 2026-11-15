@@ -29,7 +29,10 @@ export const householdOverviewProcedures = {
             .innerJoin(users, eq(users.id, householdMembers.userId))
             .where(and(eq(householdMembers.householdId, viewer.householdId), eq(householdMembers.status, 'active')));
         const visible = allMembers.filter(({ member }) => canViewMemberFinances(viewer, member));
-        const names = visible.map(({ member, name, email }) => ({ id: member.id, name: name?.trim() || email.split('@')[0] }));
+        // Label every active member: child-wallet spending is attributed to the child even
+        // for adults who can't open the child's personal finances.
+        const names = allMembers.map(({ member, name, email }) => ({ id: member.id, name: name?.trim() || email.split('@')[0] }));
+        const nameOf = (id: string) => names.find(n => n.id === id)?.name ?? 'Former member';
         const rows: LedgerRow[] = [];
         const netWorth = new Map<string, string>();
         for (const { member } of visible) {
@@ -87,7 +90,7 @@ export const householdOverviewProcedures = {
                 budgets: totalBudget ? [{ currencyCode: totalBudget.currencyCode, amount: totalBudget.amount }] : [] }),
             converted, unconvertedCurrencies: [...missing].sort(), categoryBudgets,
             previousMonthExpense: previous.currencies[0]?.expense ?? '0.00',
-            members: visible.map(({ member }, i) => ({ memberId: member.id, userId: member.userId, name: names[i].name, role: member.role,
+            members: visible.map(({ member }) => ({ memberId: member.id, userId: member.userId, name: nameOf(member.id), role: member.role,
                 isGuardian: member.isGuardian, isMe: member.userId === ctx.userId, netWorth: netWorth.get(member.id) ?? '0.00',
                 spent: converted.members.find(m => m.memberId === member.id)?.totals[0]?.amount ?? '0.00',
                 transactionsCount: rows.filter(r => r.memberId === member.id && r.date >= `${input.month}-01` && r.date <= end).length })),
