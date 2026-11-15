@@ -54,6 +54,7 @@ import {
     type HouseholdOverviewOutput,
     type FamilyFinancesOutput,
     type FamilyTaxRow,
+    currentTaxYear,
 } from './types';
 
 export function FamilyHome({
@@ -102,7 +103,7 @@ export function FamilyHome({
         limit: 8,
     });
     const wallets = trpc.household.wallets.useQuery({ today });
-    const taxes = trpc.household.familyTax.useQuery({ taxYear: Number(today.slice(0, 4)) as 2025 | 2026 });
+    const taxes = trpc.household.familyTax.useQuery({ taxYear: currentTaxYear() });
     const [allCategories, setAllCategories] = useState(false);
     const overview = query.data as HouseholdOverviewOutput | undefined;
     const financesQuery = trpc.household.familyFinances.useQuery({

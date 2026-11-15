@@ -13,14 +13,20 @@ import { FamilyGroupHeader, FamilyGroupList } from './FamilyGroupList';
 import { FamilyMoney } from './shared';
 import { orderFamilyMembers } from './permissions';
 import { useFinanceView } from './useFinanceView';
-import { localToday, type HouseholdOverview, type FamilyTaxOutput } from './types';
+import {
+    currentTaxYear,
+    SUPPORTED_TAX_YEARS,
+    type FamilyTaxOutput,
+    type HouseholdOverview,
+    type SupportedTaxYear,
+} from './types';
 
 export function FamilyTax({
     family,
 }: {
     family: NonNullable<HouseholdOverview>;
 }) {
-    const [taxYear, setTaxYear] = useState<2025 | 2026>(() => Number(localToday().slice(0, 4)) as 2025 | 2026);
+    const [taxYear, setTaxYear] = useState<SupportedTaxYear>(currentTaxYear);
     const query = trpc.household.familyTax.useQuery({ taxYear });
     const data = query.data as FamilyTaxOutput | undefined;
     const { setView } = useFinanceView();
@@ -40,14 +46,14 @@ export function FamilyTax({
                 <Select
                     value={String(taxYear)}
                     onValueChange={(value) =>
-                        setTaxYear(Number(value) as 2025 | 2026)
+                        setTaxYear(Number(value) as SupportedTaxYear)
                     }
                 >
                     <SelectTrigger className="w-auto" aria-label="Tax year">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                        {[2026, 2025].map((year) => (
+                        {SUPPORTED_TAX_YEARS.map((year) => (
                             <SelectItem key={year} value={String(year)}>
                                 {year}
                             </SelectItem>

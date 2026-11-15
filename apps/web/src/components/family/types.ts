@@ -626,3 +626,15 @@ export type MemberFinancesOutput = {
     };
     investments: null;
 };
+
+/** Tax years the server has tables for (see @woolet/shared tax tables). */
+export const SUPPORTED_TAX_YEARS = [2026, 2025] as const;
+export type SupportedTaxYear = (typeof SUPPORTED_TAX_YEARS)[number];
+
+/** The client's current year, clamped to a year the tax estimator supports. */
+export const currentTaxYear = (): SupportedTaxYear => {
+    const year = Number(localToday().slice(0, 4));
+    const max = Math.max(...SUPPORTED_TAX_YEARS) as SupportedTaxYear;
+    const min = Math.min(...SUPPORTED_TAX_YEARS) as SupportedTaxYear;
+    return year >= max ? max : year <= min ? min : (year as SupportedTaxYear);
+};
