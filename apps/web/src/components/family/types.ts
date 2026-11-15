@@ -208,3 +208,421 @@ export const localToday = () => {
 export const limitViolationOf = (error: unknown): LimitViolation | null =>
     (error as { data?: { limitViolation?: LimitViolation } } | null)?.data
         ?.limitViolation ?? null;
+
+/** Exact tRPC input/result types generated from the TypeScript checker at ca768b1.
+ * Input strings retain their Zod runtime validation:
+ * - month YYYY-MM; today/date valid YYYY-MM-DD; member/category ids UUID.
+ * - categoryId also accepts 'none'. Currency is an uppercase supported code.
+ * - familyTransactions limit: integer 1..50, default 30; cursor: opaque string.
+ * - taxYear: 2025 | 2026. All procedures are queries.
+ * Output aliases describe resolved results, before the Promise wrapper.
+ * Includes unchanged public contracts of the three refactored personal procedures.
+ */
+export type CurrencyAmount = {
+    currencyCode: string;
+    amount: string;
+};
+export type FamilyInvestments = {
+    value: CurrencyAmount[];
+    holdings: {
+        symbol: string;
+        quantity: string;
+        value: string;
+        currency: string;
+    }[];
+};
+export type MemberHoldings = {
+    memberId: string;
+    name: string;
+    role: 'owner' | 'adult' | 'child';
+    isGuardian: boolean;
+    isMe: boolean;
+    accounts: {
+        id: string;
+        bankName: string;
+        bankIcon: string | null;
+        accountName: string;
+        type: string;
+        last4: string | null;
+        balances: {
+            currencyCode: string;
+            balance: string;
+        }[];
+    }[];
+    debts: {
+        id: string;
+        type: 'i_owe' | 'they_owe';
+        personName: string;
+        counterpartyMemberId: string | null;
+        remaining: string;
+        currencyCode: string;
+        dueDate: string | null;
+    }[];
+    credits: {
+        id: string;
+        name: string;
+        remaining: string;
+        monthlyPayment: string;
+        currency: string;
+        endDate: string;
+    }[];
+    mortgages: {
+        id: string;
+        name: string;
+        remaining: string;
+        monthlyPayment: string;
+        currency: string;
+        paymentDay: number | null;
+    }[];
+    deposits: {
+        id: string;
+        name: string;
+        balance: string;
+        currency: string;
+        interestRate: string | null;
+    }[];
+    subscriptions: {
+        id: string;
+        name: string;
+        amount: string;
+        monthlyAmount: string;
+        currency: string;
+        frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+        nextPaymentDate: string | null;
+        linkedEntityType: 'credit' | 'mortgage' | null;
+    }[];
+    investments: FamilyInvestments | null;
+};
+export type InternalDebt = {
+    id: string;
+    fromMemberId: string;
+    toMemberId: string;
+    remaining: string;
+    currencyCode: string;
+};
+export type FamilyFinances = {
+    displayCurrency: string;
+    unconvertedCurrencies: string[];
+    members: MemberHoldings[];
+    summary: {
+        balances: CurrencyAmount[];
+        balancesConverted: string;
+        accountsCount: number;
+        owes: CurrencyAmount[];
+        owesConverted: string;
+        owed: CurrencyAmount[];
+        owedConverted: string;
+        monthlyPayments: CurrencyAmount[];
+        monthlyPaymentsConverted: string;
+        creditsCount: number;
+        mortgagesCount: number;
+        depositsCount: number;
+        subscriptionsCount: number;
+        investmentsValueConverted: string | null;
+    };
+    internalDebts: InternalDebt[];
+};
+export type FamilyLedgerItem = {
+    id: string;
+    source: 'personal' | 'wallet';
+    date: string;
+    kind: 'income' | 'expense';
+    amount: string;
+    currencyCode: string;
+    categoryId: string | null;
+    categoryName: string | null;
+    categoryIcon: string | null;
+    description: string | null;
+    spender: {
+        memberId: string | null;
+        name: string;
+        isMe: boolean;
+    } | null;
+    author: {
+        memberId: string | null;
+        name: string;
+        isMe: boolean;
+    } | null;
+    place:
+        | {
+              kind: 'account';
+              accountName: string;
+              bankName: string;
+          }
+        | {
+              kind: 'wallet';
+              walletId: string;
+              walletName: string;
+              walletKind: 'shared' | 'child';
+          };
+};
+export type FamilyTaxRow = {
+    memberId: string;
+    name: string;
+    isMe: boolean;
+    hasProfile: boolean;
+    estimatedTax: string | null;
+    paid: string | null;
+    nextDue: {
+        date: string;
+        amount: string;
+    } | null;
+    currency: string;
+};
+export type HouseholdOverviewInput = {
+    month: string;
+    categoryId?: string | undefined;
+    currency?: string | undefined;
+    memberId?: string | undefined;
+    today?: string | undefined;
+};
+export type HouseholdOverviewOutput = {
+    baseCurrency: string;
+    displayCurrency: string;
+    byCurrency: {
+        month: string;
+        periodStart: string;
+        periodEnd: string;
+        currencies: {
+            currencyCode: string;
+            income: string;
+            expense: string;
+            budget: string | null;
+            remaining: string | null;
+        }[];
+        members: {
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+            memberId: string | null;
+            name: string;
+            status: 'active' | 'former' | 'unassigned';
+        }[];
+        categories: {
+            categoryId: string | null;
+            categoryName: string;
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+        }[];
+        dailyExpenses: {
+            date: string;
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+        }[];
+    };
+    filtered: {
+        month: string;
+        periodStart: string;
+        periodEnd: string;
+        currencies: {
+            currencyCode: string;
+            income: string;
+            expense: string;
+            budget: string | null;
+            remaining: string | null;
+        }[];
+        members: {
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+            memberId: string | null;
+            name: string;
+            status: 'active' | 'former' | 'unassigned';
+        }[];
+        categories: {
+            categoryId: string | null;
+            categoryName: string;
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+        }[];
+        dailyExpenses: {
+            date: string;
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+        }[];
+    } | null;
+    availableCurrencies: string[];
+    previousMonthToDateExpense: string;
+    converted: {
+        month: string;
+        periodStart: string;
+        periodEnd: string;
+        currencies: {
+            currencyCode: string;
+            income: string;
+            expense: string;
+            budget: string | null;
+            remaining: string | null;
+        }[];
+        members: {
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+            memberId: string | null;
+            name: string;
+            status: 'active' | 'former' | 'unassigned';
+        }[];
+        categories: {
+            categoryId: string | null;
+            categoryName: string;
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+        }[];
+        dailyExpenses: {
+            date: string;
+            totals: {
+                currencyCode: string;
+                amount: string;
+            }[];
+        }[];
+    };
+    unconvertedCurrencies: string[];
+    categoryBudgets: {
+        categoryId: string;
+        categoryName: string;
+        amount: string;
+        spent: string;
+    }[];
+    previousMonthExpense: string;
+    members: {
+        memberId: string;
+        userId: string;
+        name: string;
+        role: 'owner' | 'adult' | 'child';
+        isGuardian: boolean;
+        isMe: boolean;
+        canOpen: boolean;
+        netWorth: string | null;
+        expenseCount: number;
+        spent: string;
+        transactionsCount: number;
+    }[];
+};
+export type FamilyTransactionsInput = {
+    month: string;
+    date?: string | undefined;
+    categoryId?: string | undefined;
+    limit?: number | undefined;
+    memberId?: string | undefined;
+    cursor?: string | undefined;
+};
+export type FamilyTransactionsOutput = {
+    items: FamilyLedgerItem[];
+    nextCursor: string | null;
+    hiddenChildRows: boolean;
+};
+export type FamilyFinancesInput = {
+    currency?: string | undefined;
+    memberId?: string | undefined;
+};
+export type FamilyFinancesOutput = {
+    displayCurrency: string;
+    unconvertedCurrencies: string[];
+    members: MemberHoldings[];
+    summary: {
+        balances: CurrencyAmount[];
+        balancesConverted: string;
+        accountsCount: number;
+        owes: CurrencyAmount[];
+        owesConverted: string;
+        owed: CurrencyAmount[];
+        owedConverted: string;
+        monthlyPayments: CurrencyAmount[];
+        monthlyPaymentsConverted: string;
+        creditsCount: number;
+        mortgagesCount: number;
+        depositsCount: number;
+        subscriptionsCount: number;
+        investmentsValueConverted: string | null;
+    };
+    internalDebts: InternalDebt[];
+};
+export type FamilyTaxInput = {
+    taxYear: 2026 | 2025;
+};
+export type FamilyTaxOutput = FamilyTaxRow[];
+export type MemberFinancesInput = {
+    memberId: string;
+    cursor?: string | undefined;
+};
+export type MemberFinancesOutput = {
+    baseCurrency: string;
+    member: {
+        memberId: string;
+        name: string;
+        role: 'owner' | 'adult' | 'child';
+        isMe: boolean;
+    };
+    accounts: {
+        bankName: string;
+        bankIcon: string | null;
+        accountName: string;
+        type: string;
+        last4: string | null;
+        balances: {
+            currencyCode: string;
+            balance: string;
+        }[];
+    }[];
+    netWorth: string;
+    unconvertedCurrencies: string[];
+    transactions: {
+        items: {
+            id: string;
+            date: string;
+            type: string;
+            amount: string;
+            currencyCode: string;
+            categoryName: string;
+            categoryIcon: string;
+            description: string | null;
+            accountName: string;
+        }[];
+        nextCursor: string | null;
+    };
+    subscriptions: {
+        name: string;
+        amount: string;
+        currency: string;
+        frequency: string;
+        nextPaymentDate: string | null;
+    }[];
+    liabilities: {
+        debts: {
+            currencyCode: string;
+            iOwe: string;
+            theyOwe: string;
+        }[];
+        credits: {
+            name: string;
+            remaining: string;
+            monthlyPayment: string;
+            currency: string;
+        }[];
+        mortgages: {
+            name: string;
+            remaining: string;
+            monthlyPayment: string;
+            currency: string;
+        }[];
+        deposits: {
+            name: string;
+            balance: string;
+            currency: string;
+        }[];
+    };
+    investments: null;
+};

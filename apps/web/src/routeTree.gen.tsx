@@ -1,7 +1,8 @@
+import { FinanceRoute } from '@/components/family/FinanceRoute';
 import { FamilyPage } from './routes/family';
 import { FamilyJoinPage } from './routes/family/join';
 import { FamilyWalletPage } from './routes/family/wallet';
-import { createRootRoute, createRoute, Outlet, useLocation, Navigate, redirect } from '@tanstack/react-router';
+import { createRootRoute, createRoute, retainSearchParams, Outlet, useLocation, Navigate, redirect } from '@tanstack/react-router';
 import { SignedIn, useAuth } from '@clerk/clerk-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -207,66 +208,68 @@ function ComingSoonCrypto() {
 // Define routes
 export const rootRoute = createRootRoute({
     component: RootLayout,
+    validateSearch: (s: Record<string, unknown>): { view?: 'personal' } => ({ view: s.view === 'personal' ? 'personal' : undefined }),
+    search: { middlewares: [retainSearchParams(['view'])] },
 });
 
 export const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
-    component: Dashboard,
+    component: () => <FinanceRoute personal={Dashboard} title="Dashboard" />,
 });
 
 export const accountsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/accounts',
-    component: AccountsPage,
+    component: () => <FinanceRoute personal={AccountsPage} title="Accounts" />,
 });
 
 export const spendingRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/spending',
-    component: SpendingPage,
+    component: () => <FinanceRoute personal={SpendingPage} title="Spending" />,
 });
 
 export const debtsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/debts',
-    component: DebtsPage,
+    component: () => <FinanceRoute personal={DebtsPage} title="Debts" />,
 });
 
 export const creditsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/financial/credits',
-    component: CreditsPage,
+    component: () => <FinanceRoute personal={CreditsPage} title="Credits" />,
 });
 
 export const mortgagesRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/financial/mortgages',
-    component: MortgagesPage,
+    component: () => <FinanceRoute personal={MortgagesPage} title="Mortgages" />,
 });
 
 export const depositsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/financial/deposits',
-    component: DepositsPage,
+    component: () => <FinanceRoute personal={DepositsPage} title="Deposits" />,
 });
 
 export const investingRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/investing',
-    component: InvestingPage,
+    component: () => <FinanceRoute personal={InvestingPage} title="Investing" />,
 });
 
 export const taxRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/tax',
-    component: TaxPage,
+    component: () => <FinanceRoute personal={TaxPage} title="Tax" />,
 });
 
 export const subscriptionsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/subscriptions',
-    component: SubscriptionsPage,
+    component: () => <FinanceRoute personal={SubscriptionsPage} title="Subscriptions" />,
 });
 
 export const comingSoonCryptoRoute = createRoute({
