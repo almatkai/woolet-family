@@ -38,28 +38,28 @@ See [docs/FEATURES.md](docs/FEATURES.md) for the full feature reference.
 
 ## 🎬 Walkthrough
 
-Short clips recorded on the live demo (1440×900). Click a preview to play the video.
+Short clips recorded on the live demo. They play right here; each one also has an HD MP4 for download.
 
 <table>
 <tr>
-<td width="50%" valign="top"><a href="docs/videos/01-family-dashboard.mp4"><img src="docs/videos/posters/01-family-dashboard.jpg" alt="Family dashboard" width="100%"></a><br><b>Family dashboard</b><br><sub>Budget, who spent what, filters by member</sub></td>
-<td width="50%" valign="top"><a href="docs/videos/03-woo-ai.mp4"><img src="docs/videos/posters/03-woo-ai.jpg" alt="Woo AI" width="100%"></a><br><b>Woo AI</b><br><sub>Ask about the family’s money in plain words</sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/01-family-dashboard.gif" alt="Family dashboard" width="100%"><br><b>Family dashboard</b><br><sub>Budget, who spent what, filters by member · <a href="docs/videos/01-family-dashboard.mp4">HD video</a></sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/03-woo-ai.gif" alt="Woo AI" width="100%"><br><b>Woo AI</b><br><sub>Ask about the family’s money in plain words · <a href="docs/videos/03-woo-ai.mp4">HD video</a></sub></td>
 </tr>
 <tr>
-<td width="50%" valign="top"><a href="docs/videos/09-woo-receipt.mp4"><img src="docs/videos/posters/09-woo-receipt.jpg" alt="Receipt → transaction" width="100%"></a><br><b>Receipt → transaction</b><br><sub>Woo reads a payment screenshot and drafts the expense</sub></td>
-<td width="50%" valign="top"><a href="docs/videos/02-dashboard-widgets.mp4"><img src="docs/videos/posters/02-dashboard-widgets.jpg" alt="Personal dashboard" width="100%"></a><br><b>Personal dashboard</b><br><sub>Drag-and-drop widgets</sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/09-woo-receipt.gif" alt="Receipt → transaction" width="100%"><br><b>Receipt → transaction</b><br><sub>Woo reads a payment screenshot and drafts the expense · <a href="docs/videos/09-woo-receipt.mp4">HD video</a></sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/02-dashboard-widgets.gif" alt="Personal dashboard" width="100%"><br><b>Personal dashboard</b><br><sub>Drag-and-drop widgets · <a href="docs/videos/02-dashboard-widgets.mp4">HD video</a></sub></td>
 </tr>
 <tr>
-<td width="50%" valign="top"><a href="docs/videos/05-accounts.mp4"><img src="docs/videos/posters/05-accounts.jpg" alt="Accounts" width="100%"></a><br><b>Accounts</b><br><sub>Cards slide out of the wallet; Family view</sub></td>
-<td width="50%" valign="top"><a href="docs/videos/05b-new-card.mp4"><img src="docs/videos/posters/05b-new-card.jpg" alt="New bank & card skin" width="100%"></a><br><b>New bank & card skin</b><br><sub>Kaspi Bank with a custom Kaspi Gold card</sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/05-accounts.gif" alt="Accounts" width="100%"><br><b>Accounts</b><br><sub>Cards slide out of the wallet; Family view · <a href="docs/videos/05-accounts.mp4">HD video</a></sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/05b-new-card.gif" alt="New bank & card skin" width="100%"><br><b>New bank & card skin</b><br><sub>Kaspi Bank with a custom Kaspi Gold card · <a href="docs/videos/05b-new-card.mp4">HD video</a></sub></td>
 </tr>
 <tr>
-<td width="50%" valign="top"><a href="docs/videos/06-spending.mp4"><img src="docs/videos/posters/06-spending.jpg" alt="Spending" width="100%"></a><br><b>Spending</b><br><sub>The month as a receipt; family spending</sub></td>
-<td width="50%" valign="top"><a href="docs/videos/07-subscriptions.mp4"><img src="docs/videos/posters/07-subscriptions.jpg" alt="Subscriptions" width="100%"></a><br><b>Subscriptions</b><br><sub>Calendar and family renewals</sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/06-spending.gif" alt="Spending" width="100%"><br><b>Spending</b><br><sub>The month as a receipt; family spending · <a href="docs/videos/06-spending.mp4">HD video</a></sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/07-subscriptions.gif" alt="Subscriptions" width="100%"><br><b>Subscriptions</b><br><sub>Calendar and family renewals · <a href="docs/videos/07-subscriptions.mp4">HD video</a></sub></td>
 </tr>
 <tr>
-<td width="50%" valign="top"><a href="docs/videos/08-taxes.mp4"><img src="docs/videos/posters/08-taxes.jpg" alt="US taxes" width="100%"></a><br><b>US taxes</b><br><sub>Estimate, 1040-ES payments, family taxes</sub></td>
-<td width="50%" valign="top"><a href="docs/videos/04-investing.mp4"><img src="docs/videos/posters/04-investing.jpg" alt="Investing" width="100%"></a><br><b>Investing</b><br><sub>AI market digest and portfolio vs S&P 500</sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/08-taxes.gif" alt="US taxes" width="100%"><br><b>US taxes</b><br><sub>Estimate, 1040-ES payments, family taxes · <a href="docs/videos/08-taxes.mp4">HD video</a></sub></td>
+<td width="50%" valign="top"><img src="docs/videos/gifs/04-investing.gif" alt="Investing" width="100%"><br><b>Investing</b><br><sub>AI market digest and portfolio vs S&P 500 · <a href="docs/videos/04-investing.mp4">HD video</a></sub></td>
 </tr>
 </table>
 
