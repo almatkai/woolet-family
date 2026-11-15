@@ -1,3 +1,4 @@
+import { FamilyMemberLink } from './FamilyMemberLink';
 import { familyTotals } from './familyTotals';
 import { trpc } from '@/lib/trpc';
 import {
@@ -100,13 +101,24 @@ export function FamilyDebts({
                         {data.internalDebts.map((debt) => (
                             <div key={debt.id} className={rowClass}>
                                 <span className="min-w-0 flex-1 text-sm">
-                                    {data.members.find(
-                                        (m) => m.memberId === debt.fromMemberId,
-                                    )?.name ?? 'Family member'}{' '}
+                                    <FamilyMemberLink
+                                        memberId={debt.fromMemberId}
+                                    >
+                                        {data.members.find(
+                                            (m) =>
+                                                m.memberId ===
+                                                debt.fromMemberId,
+                                        )?.name ?? 'Family member'}
+                                    </FamilyMemberLink>{' '}
                                     owes{' '}
-                                    {data.members.find(
-                                        (m) => m.memberId === debt.toMemberId,
-                                    )?.name ?? 'family member'}
+                                    <FamilyMemberLink
+                                        memberId={debt.toMemberId}
+                                    >
+                                        {data.members.find(
+                                            (m) =>
+                                                m.memberId === debt.toMemberId,
+                                        )?.name ?? 'family member'}
+                                    </FamilyMemberLink>
                                 </span>
                                 <FamilyMoney
                                     amount={debt.remaining}

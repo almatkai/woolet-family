@@ -13,6 +13,7 @@ import { FamilySectionState } from '@/components/family/FamilySectionShared';
 import { FamilyLedgerRows } from '@/components/family/FamilyLedgerRows';
 import { FamilyPeriodControls } from '@/components/family/FamilyPeriodControls';
 import {
+    LimitBar,
     FamilyMoney,
     MoneyTotals,
     roleLabel,
@@ -150,6 +151,10 @@ export function FamilyMemberPage() {
                   title: 'Loans',
                   rows: [...own.credits, ...own.mortgages].map((item) => ({
                       name: item.name,
+                      detail:
+                          'monthlyPayment' in item
+                              ? `Monthly payment; ${'endDate' in item ? `ends ${item.endDate}` : `payment day ${item.paymentDay ?? 'not set'}`}`
+                              : '',
                       totals: [
                           { currency: item.currency, amount: item.remaining },
                       ],
@@ -158,7 +163,7 @@ export function FamilyMemberPage() {
               {
                   title: 'Deposits',
                   rows: own.deposits.map((item) => ({
-                      name: item.name,
+                      name: `${item.name}, rate ${item.interestRate ?? 'not set'}%`,
                       totals: [
                           { currency: item.currency, amount: item.balance },
                       ],
@@ -182,7 +187,7 @@ export function FamilyMemberPage() {
               {
                   title: 'Subscriptions',
                   rows: own.subscriptions.map((item) => ({
-                      name: `${item.name}, ${item.frequency}`,
+                      name: `${item.name}, ${item.frequency}, ${item.nextPaymentDate ? `next ${item.nextPaymentDate}` : 'no next payment date'}${item.linkedEntityType ? ', Paid as loan' : ''}`,
                       totals: [
                           {
                               currency: item.currency,
@@ -338,6 +343,12 @@ export function FamilyMemberPage() {
                     >
                         Wallet: {wallet.name}
                     </Link>
+                    {wallet.limitSummary && (
+                        <LimitBar
+                            spent={Number(wallet.limitSummary.spent)}
+                            limit={Number(wallet.limitSummary.amount)}
+                        />
+                    )}
                     {wallet.limitSummary && (
                         <p className="text-sm">
                             <FamilyMoney
