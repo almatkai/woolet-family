@@ -1,8 +1,8 @@
 import { CurrencyDisplay } from '@/components/CurrencyDisplay';
 import { cn } from '@/lib/utils';
-import type { TaxProfile } from '../../../../api/src/lib/tax/input';
-import type { estimateTax } from '../../../../api/src/lib/tax/estimate';
-import type { StateTable } from '../../../../api/src/lib/tax/states';
+import type { TaxProfile } from '@woolet/shared/tax/input';
+import type { estimateTax } from '@woolet/shared/tax/estimate';
+import type { StateTable } from '@woolet/shared/tax/states';
 export type { TaxProfile, StateTable };
 export type TaxEstimate = ReturnType<typeof estimateTax>;
 export type TaxPayment = {
