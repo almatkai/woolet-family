@@ -71,12 +71,14 @@ export function FamilySectionTotal({
     converted,
     currency,
     unconvertedCurrencies = [],
+    suffix,
 }: {
     label: string;
     totals: CurrencyAmount[];
     unconvertedCurrencies?: string[];
-    converted: string;
+    converted?: string;
     currency: string;
+    suffix?: string;
 }) {
     return (
         <GlassCard className="p-4 space-y-2">
@@ -87,16 +89,38 @@ export function FamilySectionTotal({
                     exchange rate is available.
                 </Notice>
             )}
-            <MoneyTotals
-                totals={totals.map((t) => ({
-                    currency: t.currencyCode,
-                    amount: t.amount,
-                }))}
-            />
-            <p className="text-xs text-muted-foreground">
-                ≈ <FamilyMoney amount={converted} currency={currency} /> in{' '}
-                {currency}
-            </p>
+            {suffix ? (
+                <div className="space-y-0.5">
+                    {totals.map((total) => (
+                        <div key={total.currencyCode}>
+                            <div className="inline-flex items-baseline whitespace-nowrap">
+                                <MoneyTotals
+                                    totals={[
+                                        {
+                                            currency: total.currencyCode,
+                                            amount: total.amount,
+                                        },
+                                    ]}
+                                />
+                                {suffix}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <MoneyTotals
+                    totals={totals.map((t) => ({
+                        currency: t.currencyCode,
+                        amount: t.amount,
+                    }))}
+                />
+            )}
+            {converted !== undefined && (
+                <p className="text-xs text-muted-foreground">
+                    ≈ <FamilyMoney amount={converted} currency={currency} /> in{' '}
+                    {currency}
+                </p>
+            )}
         </GlassCard>
     );
 }
