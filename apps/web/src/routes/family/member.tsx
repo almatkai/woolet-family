@@ -287,7 +287,7 @@ export function FamilyMemberPage() {
                 <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3">
                     {[
                         {
-                            label: 'Net worth',
+                            label: 'Account balances',
                             amount: summaryMember?.netWorth,
                             query: overview,
                             currency: data?.displayCurrency,
@@ -320,6 +320,11 @@ export function FamilyMemberPage() {
                             <div key={label}>
                                 <dt className="text-xs text-muted-foreground">
                                     {label}
+                                    {label === 'Owes' && (
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Debts to people outside the family
+                                        </p>
+                                    )}
                                 </dt>
                                 <dd className="text-base font-semibold tabular-nums">
                                     {query.error ? (
