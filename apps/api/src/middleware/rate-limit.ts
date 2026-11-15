@@ -3,7 +3,8 @@ import { getAuth } from '@hono/clerk-auth';
 import { redis } from '../lib/redis';
 
 const WINDOW_SIZE_MS = 60 * 1000; // 1 minute
-const MAX_REQUESTS = 100;
+// Override only for local load or browser QA runs; production keeps the default.
+const MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS) > 0 ? Number(process.env.RATE_LIMIT_MAX_REQUESTS) : 100;
 
 export const rateLimitMiddleware = async (c: Context, next: Next) => {
     const userId = getAuth(c)?.userId;
