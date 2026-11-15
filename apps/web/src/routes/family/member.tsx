@@ -264,6 +264,7 @@ export function FamilyMemberPage() {
             >
                 {null}
             </PageHeader>
+            <p className="text-sm text-muted-foreground sm:hidden">{roleLabel(member.role, member.isGuardian)}</p>
             <p className="text-sm text-muted-foreground">
                 {member.isMe
                     ? 'This is how your family sees your finances.'

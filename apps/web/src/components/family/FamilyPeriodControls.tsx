@@ -34,7 +34,7 @@ export function FamilyPeriodControls({
         <div className="ml-auto flex flex-wrap items-center gap-2">
             <Button
                 variant="ghost"
-                className="size-10"
+                className="size-10 min-h-10"
                 aria-label="Previous month"
                 onClick={() => move(-1)}
             >
@@ -45,7 +45,7 @@ export function FamilyPeriodControls({
             </span>
             <Button
                 variant="ghost"
-                className="size-10"
+                className="size-10 min-h-10"
                 aria-label="Next month"
                 onClick={() => move(1)}
             >
@@ -54,6 +54,7 @@ export function FamilyPeriodControls({
             <Button
                 variant="ghost"
                 size="sm"
+                className="min-h-10"
                 onClick={() =>
                     update({
                         month: undefined,
@@ -77,7 +78,7 @@ export function FamilyPeriodControls({
                     aria-label="Show totals in"
                     className="h-9 min-w-[5.5rem] w-auto"
                 >
-                    <SelectValue />
+                    <SelectValue>{currency}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                     <SelectGroup>

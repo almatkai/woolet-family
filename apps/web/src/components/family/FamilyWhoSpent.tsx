@@ -97,9 +97,12 @@ export function FamilyWhoSpent({
                                                 </span>
                                             )}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                                             {detail
-                                                ? `${roleLabel(detail.role, detail.isGuardian)} · ${detail.expenseCount} ${detail.expenseCount === 1 ? 'purchase' : 'purchases'}`
+                                                ? <>
+                                                    <span>{roleLabel(detail.role, detail.isGuardian)}</span>
+                                                    <span>{detail.expenseCount} {detail.expenseCount === 1 ? 'purchase' : 'purchases'}</span>
+                                                </>
                                                 : m.status === 'former'
                                                   ? 'Former member'
                                                   : 'Unassigned'}

@@ -147,6 +147,7 @@ export function FamilyHome({
                     trigger={<ActionButton>+ Add</ActionButton>}
                 />
             </PageHeader>
+            <p className="text-sm text-muted-foreground sm:hidden">{family.household.name}</p>
             <div className="flex flex-wrap items-center gap-2">
                 <ScopeSwitch />
                 <FamilyPeriodControls
