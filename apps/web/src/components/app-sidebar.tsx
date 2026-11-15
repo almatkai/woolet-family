@@ -1,5 +1,7 @@
 'use client';
 
+import { retainFinanceView } from '@/lib/finance-navigation';
+
 import { Link, useRouterState } from '@tanstack/react-router';
 import { SignOutButton, useAuth, useUser } from '@clerk/clerk-react';
 import {
@@ -113,7 +115,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem className="flex items-center">
                         <SidebarMenuButton size="lg" asChild>
-                            <Link to="/" {...preloadProps}>
+                            <Link to="/" search={retainFinanceView} {...preloadProps}>
                                 <img src="/assets/woolet-icon.png" alt="Woolet" className="size-8 rounded-lg" />
                                 <div className="flex flex-col gap-0.5 leading-none">
                                     <span className="font-semibold">Woolet</span>
@@ -138,7 +140,7 @@ export function AppSidebar() {
                                 {group.items.filter(item => !familyOnly || !familyFocusHiddenPaths.has(item.url)).map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton asChild isActive={isActive(item.url)} className={navButtonClass}>
-                                            <Link to={item.url} {...preloadProps}>
+                                            <Link to={item.url} search={retainFinanceView} {...preloadProps}>
                                                 <item.icon className="size-4" />
                                                 <span>{item.title}</span>
                                             </Link>
@@ -158,7 +160,7 @@ export function AppSidebar() {
                             {comingSoonItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                                        <Link to={item.url} className="opacity-60" {...preloadProps}>
+                                        <Link to={item.url} search={retainFinanceView} className="opacity-60" {...preloadProps}>
                                             <item.icon className="size-4" />
                                             <span>{item.title}</span>
                                         </Link>
@@ -178,7 +180,7 @@ export function AppSidebar() {
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <SidebarMenuButton asChild size="lg" className="bg-amber-100 text-amber-700 hover:bg-amber-200 hover:text-amber-800 hover:no-underline border border-amber-200 mb-2 h-10 transition-colors">
-                                <Link to="/settings" {...preloadProps}>
+                                <Link to="/settings" search={retainFinanceView} {...preloadProps}>
                                     <div className="flex items-center justify-center size-8 rounded-lg bg-amber-200/50 text-amber-700 shrink-0">
                                         <FlaskConical className="size-4" />
                                     </div>
@@ -228,7 +230,7 @@ export function AppSidebar() {
                                     Account
                                 </DropdownMenuItem>}
                                 <DropdownMenuItem asChild>
-                                    <Link to="/settings" className="flex items-center" {...preloadProps}>
+                                    <Link to="/settings" search={retainFinanceView} className="flex items-center" {...preloadProps}>
                                         <Settings className="size-4 mr-2" />
                                         Settings
                                     </Link>
